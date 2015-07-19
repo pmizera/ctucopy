@@ -1,0 +1,49 @@
+CtuCopy 3 changes
+
+v3.0   - initial version
+v3.0.0  - better man page, included -fea_kind logspec, bugfixes
+v3.0.1 - changed HTK kind to MFCC to be able to online compute Delta/DelDel 
+         in other tools (for USER impossible)
+v3.0.2 - extended config file line size in opts.cc from 200 to 9999
+v3.0.3 - 1st frame in exten was completely zeros, now 5% of input
+v3.0.4 - added option "-info"
+       - fixed single file mode progress printout
+       - in normal mode (no -v, -info, -quiet) not printing progress info
+v3.0.5 - HTK output format: setting correctly bits for c0 and Energy in
+         HTK header (previously anything was MFCC, now also MFCC[_0][_E])
+v3.0.6 - fixed dither (dither other than 0 or 1 did not work properly):
+       - modified FB design for rectangular window, see BUGS in man page
+v3.0.7 - oops, removed debugging code from v3.0.6, which used to abort execution
+v3.0.8 - small fixes in documentation (within program and man page):
+		  added "-nr_mode none" to documentation
+		  added full definition of "-preset" macros to manual page
+v3.0.9 - bugfix: feature kind logspec used to produce bad features 
+		 in htk and pfile
+v3.0.10 - fix in documentation and internal CtuCopy help printout:
+		  2-pass spectral subtraction was presented as 2hwss, actually
+		  implemented is (and works) 2fwss. Now everywhere only 2fwss.
+v3.0.11 - bugfix: with remove_dc on, 1st spectral coeff floored to 1e-20
+           (normally it would be zero and its log thus undefined)
+        - bugfix: changed arch-dependent-sized variables in in.cc and out.cc
+           to fixed-sized variables for I/O operations -> now declared in types.h
+           (on some 64b archs I/O routines did not work properly) 
+v3.2    - 2011-12-12 
+          TRAP-DCT support included. 
+          Some code polishing, minor bug fixes.
+v3.2.1  - 2012-08-20
+          New licence: CtuCopy is now released under Apache 2.0.
+v3.2.2  - 2013-06-03
+          - Added CMS
+            Average cepstrum is computed:
+              - moving average               -> fea_Z_exp
+              - exponential moving averaging -> fea_Z_block 
+
+CtuCopy 4 changes
+
+v4.0.0  - 2015-04-07
+        - CMN, CMVN normalization
+        - add delta, delta-delta, delta-delta-delta features
+        - stacked features (MFCC/PLP/FBANK)
+        - TD-IIR MFCC features
+        - support of KALDI format
+        - add examples scripts for using ctucopy tool (see: examples/run.sh)
