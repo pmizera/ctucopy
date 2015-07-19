@@ -1,5 +1,4 @@
 # CtuCopy 
-# Speech Enhancement, Feature Extraction tool
 
 CtuCopy is a command line tool implementing speech enhancement and feature extraction algorithms. It is similar to HCopy tool from Cambridge's HTK and is partially compatible with it. CtuCopy acts as a filter with speech waveform file(s) at the input and either a speech waveform file(s) or feature file(s) at the output.
 
