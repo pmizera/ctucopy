@@ -1,0 +1,866 @@
+Content-type: text/html
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of CtuCopy</TITLE>
+</HEAD><BODY>
+<H1>CtuCopy</H1>
+Section: CtuCopy - Speech Enhancement, Feature Extraction (1)<BR>Updated: 4.0.0<BR><A HREF="#index">Index</A>
+<A HREF="/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+<P>
+
+CtuCopy - universal feature extractor and speech enhancer.
+<P>
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<P>
+
+<B>ctucopy </B>
+
+[<I>options</I>]
+<P>
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<P>
+
+CtuCopy is a command line tool implementing speech enhancement and
+feature extraction algorithms. It is similar to HCopy tool from
+Cambridge's HTK and is partially compatible with it. CtuCopy acts as a
+filter with speech waveform file(s) at the input and either a speech waveform file(s) or
+feature file(s) at the output.  
+<P>
+CtuCopy implements several speech enhancing methods based on spectral
+subtraction. Extended Spectral Subtraction - exten [Sovka et al.,
+EUSIPCO'96] combines Wiener filtering and spectral subtraction with
+no need of a voice activity detector (VAD). Other methods are based on
+spectral subtraction with VAD which can be either external (data read
+from file) or internal (Burg's cepstral detector). The noise
+suppression methods can be applied either directly to speech spectra
+or to a spectra filtered by a bank of filters. 
+<P>
+Bank of filters offers a set of frequency scales (melodic, Bark,
+expolog, linear) and various filter shapes (triangular, rectangular,
+trapezoidal same as time-domain IIR based implementation) which can be
+combined to form standard and user-defined filter banks.
+<P>
+In feature extraction mode a number of common features can be
+extracted from original or enhanced speech, e.g. LPC, PLP, MFCC or
+magnitude spectrum. Current version also implements TRAP-DCT
+features. Features can be saved either in HTK, pfile, or KALDI
+format.
+<P>
+<A NAME="lbAE">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+CtuCopy recognizes these options:
+<A NAME="lbAF">&nbsp;</A>
+<H3>INPUT/OUTPUT:</H3>
+
+<B>-format_in &lt;</B><I>fmt</I>&gt;
+
+Input speech file format.
+<BR>&nbsp;&lt;<I>fmt</I>&gt;&nbsp;=&nbsp;raw&nbsp;&nbsp;&nbsp;-&nbsp;sequence&nbsp;of&nbsp;16b&nbsp;integers
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;alaw&nbsp;&nbsp;-&nbsp;sequence&nbsp;of&nbsp;8b&nbsp;integers,&nbsp;A-law&nbsp;encoded
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mulaw&nbsp;-&nbsp;sequence&nbsp;of&nbsp;8b&nbsp;integers,&nbsp;mu-law&nbsp;encoded
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;wave&nbsp;&nbsp;-&nbsp;MS&nbsp;wave&nbsp;file,&nbsp;PCM&nbsp;16b,&nbsp;mono
+<DL COMPACT>
+<DT><B>-format_out &lt;</B><I>fmt</I>&gt;
+
+<DD>
+Output file format. This option also determines whether feature extraction
+should be performed or not. Output format can either be a speech file
+(raw, wave) or feature file (htk, pfile). In pfile case all input
+files are saved to the only one output file which must be specified
+by <I>filename</I>, see below.
+<BR>&nbsp;&lt;<I>fmt</I>&gt;&nbsp;=&nbsp;raw&nbsp;&nbsp;&nbsp;-&nbsp;sequence&nbsp;of&nbsp;16b&nbsp;integers
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;wave&nbsp;&nbsp;-&nbsp;MS&nbsp;wave&nbsp;file,&nbsp;PCM&nbsp;16b,&nbsp;mono
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;htk&nbsp;&nbsp;&nbsp;-&nbsp;HTK&nbsp;feature&nbsp;file
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pfile=&lt;<I>filename</I>&gt;&nbsp;-&nbsp;ICSI&nbsp;pfile.
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ark=&lt;<I>filename</I>&gt;&nbsp;-&nbsp;KALDI&nbsp;ark,scp&nbsp;format.
+<DT><B>-endian_in &lt;little|big&gt;</B>
+
+<DD>
+Input byte order. Little endian means LSB..MSB, big endian the
+opposite. Example: number 1 stored in two bytes looks like 10 for
+little, and 01 for big endian. It does not apply to MS wave files,
+which are read always in machine native format (displayed by CtuCopy
+when invoked with -v).
+<DT><B>-endian_out &lt;little|big&gt;</B>
+
+<DD>
+Output byte order (see -endian_in). Applies only to raw and htk outputs. Otherwise
+native order is used. 
+<DT><B>-online_in</B>
+
+<DD>
+Input will be read from standard input. This option requires single file
+mode at the output (output either to standard output or to a single
+file specified with -o option). The input file size
+is generally not known at the beginning, therefore for MS wave input
+format  the size in
+file's header is ignored and the input is read until EOF.
+<DT><B>-online_out</B>
+
+<DD>
+Similar to -online_in. Requires single file mode at the input. Online
+output is only applicable to output raw and htk formats which are
+then saved with no header.
+<DT><B>-S &lt;</B><I>filename</I>&gt;
+
+<DD>
+Specifies list of files to be processed. The <I>filename</I> structure
+is one input and output filenames per line. Input and output are
+separated by one or more tabs or spaces. When format_out is pfile, then
+output string is discarded and a filename specified in -format_out option is
+used instead. 
+<DT><B>-i &lt;</B><I>filename</I>&gt;
+
+<DD>
+Single input file. This
+option overrides the -S option. For debugging and testing purposes. 
+<DT><B>-o &lt;</B><I>filename</I>&gt;
+
+<DD>
+Single output file. See -i option.
+<DT><B>-preem &lt;</B><I>float</I>&gt;
+
+<DD>
+Preemphasis factor to be applied to the input speech. Preemphasis
+formula is y[k] = x[k] - <I>preem</I>*x[k-1]. Value has to be in the
+range &lt;0.0-1.0) and 0 means no preemphasis.
+<DT><B>-fs &lt;</B><I>int</I>&gt;
+
+<DD>
+Sampling frequency in Hz. This option must be explicitly set as
+it is used for computation of window sizes. MS wave files at the input
+are checked to match this value before processing.
+<DT><B>-dither &lt;</B><I>float</I>&gt;
+
+<DD>
+Dithering constant. A small dither can be added to the input
+signal. Value 0.0 means no dither, 1.0 means random number in
+range &lt;-1,+1&gt; at uniform distribution. 1.0 is default.
+<DT><B>-remove_dc &lt;on|off&gt; </B>
+
+<DD>
+Remove DC from every signal frame (done after preemphasis and
+Hamming window).
+<P>
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+<H3>SEGMENTATION:</H3>
+
+<DL COMPACT>
+<DT><B>-w &lt;</B><I>float</I>&gt;
+
+<DD>
+Window size in milliseconds. The true window length in samples is
+internally computed from sampling frequency.
+<DT><B>-s &lt;</B><I>float</I>&gt;
+
+<DD>
+Window shift size in milliseconds. See -w option. 
+<BR>
+
+NOTE: When output is
+speech, it is recommended to choose 50% or 75% overlap 
+(w/s = 2 or w/s = 4), otherwise there might be a significant ripple in
+output signal envelope due to OLA. When invoked with -v option, CtuCopy computes
+and prints out the maximum ripple for chosen values in % before computation.
+<P>
+</DL>
+<A NAME="lbAH">&nbsp;</A>
+<H3>FILTER BANK:</H3>
+
+<DL COMPACT>
+<DT><B>-fb_scale &lt;</B><I>scale</I>&gt;
+
+<DD>
+Type of the frequency scale warping. By default CtuCopy designes a warped
+version of the original frequency axis and further designes a set of filters which
+are equidistant on the warped scale. 
+<BR>&nbsp;&lt;<I>scale</I>&gt;&nbsp;=&nbsp;mel&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;melodic&nbsp;scale&nbsp;(used&nbsp;in&nbsp;MFCC)
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bark&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;Bark&nbsp;scale&nbsp;(used&nbsp;in&nbsp;original&nbsp;PLP)
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lin&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;linear&nbsp;scale&nbsp;(no&nbsp;change)
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;expolog&nbsp;-&nbsp;special&nbsp;scale&nbsp;originally&nbsp;used&nbsp;for&nbsp;experiments&nbsp;with
+Lombard speech by Hansen
+<DT><B>-fb_shape &lt;</B><I>shape</I>&gt;
+
+<DD>
+Shape of filters. By default every shape has a predefined
+overlap of subsequent filters (see below). When a different
+overlap is needed, the filter 
+bank needs to be designed completely by the user using full -fb_definition
+specification (see -fb_definition). 
+<BR>&nbsp;&lt;<I>shape</I>&gt;&nbsp;=&nbsp;triang&nbsp;&nbsp;-&nbsp;triangular&nbsp;shape&nbsp;with&nbsp;50%&nbsp;overlap
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rect&nbsp;&nbsp;&nbsp;-&nbsp;rectangular&nbsp;shape&nbsp;with&nbsp;no&nbsp;overlap
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trapez&nbsp;-&nbsp;trapezoidal&nbsp;shape&nbsp;used&nbsp;in&nbsp;PLP&nbsp;analysis.
+<BR>
+
+NOTE: Trapezoidal shape can only be used in PLP filter bank. As this
+special shape is related to critical band theory, user cannot choose
+number of filters in the bank, neither their positions. Thus, when
+trapez shape is chosen, options -fb_scale and -fb_definition are
+ignored and a special filter bank is designed.
+<P>
+NOTE 2: See BUGS section for more information on rectangular shape.
+<DT><B>-fb_norm &lt;on|off&gt;</B>
+
+<DD>
+Normalize filters to have unit area. Filters that are spread
+uniformly on the warped frequency scale cover different number of
+frequency bins of the underlying linear frequency scale as given by
+FFT. When white noise enters the filter bank, it is no more white
+after filtering. This option compensates for this effect. 
+<DT><B>-fb_power &lt;on|off&gt;</B>
+
+<DD>
+Use FFT power spectrum at the input to the filter bank instead of
+magnitude spectrum.
+<DT><B>-fb_eqld &lt;on|off&gt;</B>
+
+<DD>
+Apply a simplified Equal Loudness Curve to the filter bank,
+prioritizing central frequencies (auditory-like operation). Note that
+Equal Loudness is applied after possible normalization of filter area
+(see -fb_norm). 
+<DT><B>-fb_inld &lt;on|off&gt;</B>
+
+<DD>
+Apply Intensity Loudness Power Law (auditory-like operation). It is a
+nonlinear operation applied independently to every frequency bin after
+filtering the spectrum with a filter 
+bank. It is represented by a cube square root (compression of
+dynamics).  
+<DT><B>-fb_definition &lt;</B><I>string</I>&gt;
+
+<DD>
+Defines location of all filters in the filter bank. The filter bank 
+consists of a number of filters that are fully described by
+&lt;<I>string</I>&gt;. Filters can be split to several subsets. Every subset is
+represented by one <I>token</I>. The <I>token</I>
+describes a set of filters located equidistantly on the warped frequency
+axis (specified by -fb_scale option); it specifies start and end
+positions of the subset in Hz units and also how many filters should
+be placed in that location. See more explanation below <I>string</I>
+definition. 
+<P>
+&lt;<I>string</I>&gt; = <I>token</I>[,<I>token</I>]...
+<BR>
+
+<I>token</I>    =
+[[<I>X</I>-<I>Y</I>Hz:]<I>K</I>-<I>L</I>/]<I>N</I>filters
+<BR>
+
+<TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</TT><I>X</I>,<I>Y</I> ... frequency limits of this filter subset in<BR>
+Hz. The first filter starts at <I>X</I> Hz, the last filter ends at
+<I>Y</I> Hz, inclusively. If omitted, defaults to 0-fs/2.
+<BR>
+
+<TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</TT><I>N</I>   ... number of equidistant filters in the subset<BR>
+<BR>
+
+<TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</TT><I>K</I>,<I>L</I> ... optionally specifies a subset of the above<BR>
+filters (indexed from 1). If not specified, defaults to 1-<I>N</I>.
+<BR>
+
+<P>
+Most of the time only one token is used with the default settings. For
+example, a MFCC filter bank with 25 filters can be specified with
+&quot;-fb_scale mel -fb_definition 25filters&quot;. It says &quot;Place 25
+equidistant filters on melodic scale from 0Hz to (fs/2)Hz.&quot;. More
+examples can be found in examples section.
+<BR>
+
+NOTE: There must NOT be any whitespace in &lt;<I>string</I>&gt;.
+<P>
+</DL>
+<A NAME="lbAI">&nbsp;</A>
+<H3>NOISE REDUCTION:</H3>
+
+<DL COMPACT>
+<DT><B>-nr_mode &lt;</B><I>mode</I>&gt;
+
+<DD>
+Algorithm for additive noise suppression. These algorithms are
+accompanied by a number of options (see below) 
+which need to be properly set for a good performance. Is is
+recommended to use presets (see -preset option) and then possibly modify the
+settings. 
+<BR>
+
+<DT><DD>
+&lt;<I>mode</I>&gt; = exten - Extended Spectral Subtraction
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hwss&nbsp;&nbsp;-&nbsp;half-wave&nbsp;rectified&nbsp;spectral&nbsp;subtraction&nbsp;with&nbsp;VAD
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fwss&nbsp;&nbsp;-&nbsp;full-wave&nbsp;rectified&nbsp;spectral&nbsp;subtraction&nbsp;with&nbsp;VAD
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2fwss&nbsp;-&nbsp;2-pass&nbsp;full-wave&nbsp;rectified&nbsp;s.s.&nbsp;with&nbsp;VAD
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;none&nbsp;&nbsp;-&nbsp;no&nbsp;noise&nbsp;reduction
+<DT><B>-nr_p &lt;</B><I>double</I>&gt;
+
+<DD>
+Integration constant for spectral subtraction. It affects the
+smoothness of noise/speech estimation via the formula &quot;NewEstimate =
+<I>p</I> * OldEstimate + (1 - <I>p</I>) * Observation&quot;. Should be
+somewhere below 1.0.
+<DT><B>-nr_q &lt;</B><I>double</I>&gt;
+
+<DD>
+VAD threshold used in internal Burg's cepstral detector.
+<DT><B>-nr_a &lt;</B><I>double</I>&gt;
+
+<DD>
+Magnitude spectrum power constant for spectral subtraction. Defines a
+domain where SS takes place. Normally either 1 (magnitude) or 2
+(power) spectrum. However, any floating number can be used with some
+performance drawback. Note that this option does not affect the domain
+at the input to the filter bank, see option -fb_power for more.
+<DT><B>-nr_b &lt;</B><I>double</I>&gt;
+
+<DD>
+Noise oversubtraction factor (applies to NR modes hwss and
+fwss). It is a multiplicative factor applied to the noise estimate before
+it is subtracted from the input speech-and-noise mixture.
+<DT><B>-nr_initsegs &lt;</B><I>int</I>&gt;
+
+<DD>
+Number of initial frames in every input file that are guaranteed not
+to contain any speech. It is used for initial estimate of noise in
+algorithms hwss, fwss and 2fwss.
+<DT><B>-vad &lt;</B><I>string</I>&gt;
+
+<DD>
+Specification of Voice Activity Detector (VAD). Applies to NR modes
+hwss, fwss and 2fwss.
+<BR>
+
+<P>
+&lt;<I>string</I>&gt; = burg - built-in Burg's cepstral detector
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;file=&lt;<I>filename</I>&gt;&nbsp;-&nbsp;read&nbsp;VAD&nbsp;information&nbsp;from
+<I>filename</I>.
+<BR>
+
+<P>
+File &lt;<I>filename</I>&gt; is a simple text file containing a sequence of
+characters 0 or 1, one char for every input signal frame. 0 means no
+speech in the frame , 1 means the opposite. For more
+files at the input, there is only one VAD file containing as many
+characters as there are overall frames at the input. 
+<DT><B>-rasta &lt;</B><I>filename</I>&gt;
+
+<DD>
+<I>*** NOT SUPPORTED IN VERSION 3.0 ***</I>
+
+<BR>
+
+Perform RASTA filtering with impulse responses loaded from the file
+<I>filename</I>. 
+<DT><B>-nr_when &lt;beforeFB,afterFB&gt;</B>
+
+<DD>
+When used as feature extractor, this specifies whether noise reduction
+should be done at the output of filter bank (afterFB) or rather before
+applying the filter bank (beforeFB).
+<P>
+</DL>
+<A NAME="lbAJ">&nbsp;</A>
+<H3>FEATURE EXTRACTION:</H3>
+
+<DL COMPACT>
+<DT><B>-fea_kind &lt;</B><I>kind</I>&gt;
+
+<DD>
+Specifies the type of output features and thus feature extraction
+algorithm.
+<BR>
+
+<P>
+&lt;<I>kind</I>&gt; = spec - use directly the output of the filter bank as
+features
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;logspec&nbsp;-&nbsp;logarithm&nbsp;of&nbsp;spec
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lpa&nbsp;&nbsp;-&nbsp;Linear&nbsp;Predictive&nbsp;Coefficients.&nbsp;It&nbsp;means&nbsp;to&nbsp;take
+power of filter bank outputs (unless -fb_inld is on), take iDFT, and
+run Levinson-Durbin.
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lpc&nbsp;&nbsp;-&nbsp;Linear&nbsp;Predictive&nbsp;Cepstrum.&nbsp;The&nbsp;same&nbsp;as&nbsp;for&nbsp;lpa&nbsp;plus
+the recursion from LP coeffs to cepstral coeffs. Used e.g. in PLP. 
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dctc&nbsp;-&nbsp;Cepstrum&nbsp;obtained&nbsp;with&nbsp;DCT.&nbsp;It&nbsp;means&nbsp;taking&nbsp;log&nbsp;of
+filter bank outputs and projecting to DCT bases. Used e.g. in MFCC.
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trapdct,&lt;int&gt;,&lt;int&gt;&nbsp;-&nbsp;TRAP-DCT&nbsp;cepstral&nbsp;coeffs&nbsp;calculated
+from log mel spectra. First arg is TRAP length in frames, second arg
+is the number of the first DCT coefficients to save per band.
+Per-frame log mels are buffered and on their temporal trajectories (the current
+frame plus a symmetrical window) a Hamming window is applied followed by DCT
+transform. This is done independently in all frequency bands.
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;td-iir-mfcc&nbsp;-&nbsp;MFCC-like&nbsp;features&nbsp;which&nbsp;are&nbsp;based&nbsp;on&nbsp;the&nbsp;bank&nbsp;of&nbsp;IIR
+filters with frequency responses close to standard triangular MFCC
+filter-bank. Input signal is filtered by the set of distinct IIR
+filters in the time domain and band power spectrum is then obtained by
+the computation of short-time power of each particular band signal
+from the time window of the length specified by -w and -s
+optionn. Next steps (logarithm and DCT application) are same as for
+the standard approach of MFCC computation.
+<P>
+<DT><B>&nbsp;-fea_delta &lt;</B><I>kind</I>&gt;
+
+<DD>
+Specifies the type of output differential feats.
+<BR>
+
+<P>
+&lt;<I>kind</I>&gt; = d - compute dynamic diff. coefficients (delta)
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d_a&nbsp;-&nbsp;compute&nbsp;dynamic,&nbsp;acceleration&nbsp;diff.&nbsp;coefficients&nbsp;(delta-delta-delta)
+<BR>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d_a_t&nbsp;-&nbsp;compute&nbsp;dynamic,&nbsp;acceleration,&nbsp;third&nbsp;diff.&nbsp;coefficients&nbsp;(delta-delta-delta-delta-delta-delta)
+<P>
+<DT><B>&nbsp;-fea_trap &lt;</B><I>int</I>&gt;
+
+<DD>
+The creation of context information from features defined by
+-fea_kind. The context information is caught using context window of
+specified length created from several neighbouring short-time frames
+(stacked features). The context window size is specified by the
+integer value (number of frames; the value 5 =&gt; cw=5+5+1, i.e. the
+length of context widnow equal to 11)
+<BR>
+
+<DT><B>-fea_lporder &lt;</B><I>int</I>&gt;
+
+<DD>
+Order of Linear Predictive model (when applicable).
+<DT><B>-fea_ncepcoeffs &lt;</B><I>int</I>&gt;
+
+<DD>
+When applicable, number of cepstral coefficients included in the feature vector. It
+does not include c0, which has its own option -fea_c0.
+<DT><B>-fea_c0 &lt;on|off&gt;</B>
+
+<DD>
+Add zeroth cepstral coefficient to the feature vector if
+available.
+<DT><B>-fea_E &lt;on|off&gt;</B>
+
+<DD>
+Add log of frame energy to the feature vector. Log energy is defined for every
+fea_kind as follows:
+<P>
+fea_kind = spec/logspec/lpa/lpc: log of frame energy after passing through Noise
+Reduction and Filter Bank blocks. It is identical to the log of the zeroth
+autocorrelation coefficient. 
+<P>
+fea_kind = dctc: Energy is computed always before Filter Bank
+block. When Noise Reduction takes place after Filter bank, it is
+computed from input spectra; otherwise it is computed from spectra
+after Noise Reduction. 
+<P>
+NOTE: These definitions can be overriden by the -fea_rawenergy
+option.
+<DT><B>-fea_rawenergy &lt;on|off&gt;</B>
+
+<DD>
+Compute frame energy directly from the input signal frame before doing
+anything (preemphasis, Hamming, FFT), ignoring fea_kind.
+<DT><B>-fea_lifter &lt;</B><I>int</I>&gt;
+
+<DD>
+Cepstrum liftering constant. Value of 1 means no liftering. Otherwise
+it is defined as in HTK book.
+<DT><B>-fea_Z_block &lt;</B><I>int</I>&gt;
+
+<DD>
+Average cepstrum is computed on the basis of moving average over the
+fixed time interval. Integer value of fea_Z_block correspodns to the
+length of moving window in miliseconds across which average cepstrum
+is computed. Value 5000 means the window length equal to 5s, value of
+-1 means no CMS.
+<DT><B>-fea_Z_exp &lt;</B><I>int</I>&gt;
+
+<DD>
+Average cepstrum is computed on the basis of recursive exponential
+moving average. Integer value of fea_Z_exp corresponds to the time
+constant in miliseconds (equivalent window size) across which average
+cepstrum is computed. Value 5000 means the window length equal to 5s,
+value of -1 means no CMS. 
+<DT><B>-stat_cmvn &lt;</B><I>filename</I>&gt;
+
+<DD>
+The cepstrum mean and variance statistics are computed on the basis of
+given input list for feature extraction (usually grouping utterances
+of particular speakers; see examples/run.sh script) and saved to the
+specified output file for further application using .apply_cmvn
+option.
+<DT><B>-apply_cmvn &lt;</B><I>filename</I>&gt;
+
+<DD>
+The cepstrum mean and variance normalization is done on the basis
+of loaded CMVN statistics precomputed using the -stat_cmvn option and
+saved in the specified file.
+<P>
+</DL>
+<A NAME="lbAK">&nbsp;</A>
+<H3>PRESETS:</H3>
+
+<DL COMPACT>
+<DT><B>-preset &lt;</B><I>type</I>&gt;
+
+<DD>
+Apply a preset to the above options. This macro option behaves just like any
+other option. Applied settings can be overriden by any command line
+option following the -preset option. 
+<P>
+To see exactly what has changed after using the -preset option, it is
+recommended to use -v option and check the program output. For macro
+definitions, see below.
+<P>
+&lt;<I>type</I>&gt; = mfcc - MFCC computation similar to what HTK does
+<DT>
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;equivalent&nbsp;is:&nbsp;&quot;-fb_scale&nbsp;mel&nbsp;-fb_shape&nbsp;triang&nbsp;
+-fb_power on -fb_definition 1-26/26filters
+-nr_mode none -fb_eqld off -fb_inld off -fea_kind dctc -fea_ncepcoefs 12 -fea_c0 on
+-fea_E off -fea_lifter 22 -fea_rawenergy off&quot;           
+<DT>
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;plpc&nbsp;-&nbsp;suitable&nbsp;for&nbsp;PLP&nbsp;computation&nbsp;similar&nbsp;to&nbsp;the&nbsp;original
+<DD>Hermansky paper (Bark scale, trapezoidal filters).
+<DT>
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;equivalent&nbsp;is:&nbsp;&quot;-fb_scale&nbsp;bark&nbsp;-fb_shape&nbsp;trapez&nbsp;
+-fb_power on -fb_definition 1-15/15filters
+-nr_mode none -fb_eqld on -fb_inld on -fea_kind lpc -fea_lporder 12 -fea_ncepcoefs 
+<DD>12 -fea_c0 on -fea_E off -fea_lifter 22 -fea_rawenergy off&quot;        
+<DT>
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exten&nbsp;-&nbsp;suitable&nbsp;for&nbsp;speech&nbsp;enhancement&nbsp;using&nbsp;Extended
+<DD>Spectral Subtraction.
+<DT>
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;equivalent&nbsp;is:&nbsp;&quot;-w&nbsp;32&nbsp;-s&nbsp;10&nbsp;-fb_definition&nbsp;none&nbsp;
+-fb_scale none -fb_shape none -nr_a 2 -fb_eqld off -fb_inld off -fb_power off
+-fb_norm off -nr_mode exten -fea_kind none -fea_c0 off -fea_E off -fea_lifter 0
+-fea_rawenergy off&quot;        
+<DT>
+<DD>Note that by default CtuCopy acts as a feature extractor with
+pseudo-PLP features, mel scale, triangular filters.
+<P>
+</DL>
+<A NAME="lbAL">&nbsp;</A>
+<H3>MISCELLANEOUS:</H3>
+
+<DL COMPACT>
+<DT><B>-verbose, -v</B>
+
+<DD>
+Verbose mode. Prints generally more, also prints all warnings and
+at the beginning also prints overall program settings. Highly recommended for
+debugging, optimizations and fine-tuning.
+<DT><B>-quiet</B>
+
+<DD>
+Suppress console output. Only error messages related to a premature program
+termination are printed. 
+<DT><B>-info</B>
+
+<DD>
+Prints overall program settings at the beginning.
+<DT><B>-C &lt;</B><I>filename</I>&gt;
+
+<DD>
+Specifies configuration file. Configuration file acts as a set of command
+line options. Configuration file is always parsed before any other
+options on the command line. 
+<P>
+SYNTAX: It is a text file with one command line option per line. Empty lines and
+whitespace are allowed. Comments are allowed, they begin with
+character #. Any text following # up to the end of line is
+ignored. 
+<DT><B>-h, --help</B>
+
+<DD>
+Print brief version of this text and exit.
+<P>
+</DL>
+<A NAME="lbAM">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<P>
+
+Speech enhancement with one file:
+<DL COMPACT>
+<DT><DD>
+<B>ctucopy -preset exten -fs 16000 -format_in wave -format_out wave -i input.wav -o output.wav -v</B>
+
+<P>
+This loads a preset for speech enhancement using extended spectral
+subtraction, then sets sampling frequency to 16 kHz, sets input and
+output formats to MS wave and after a specification of input and output
+files sets the verbose flag to on so that program prints out full
+settings and also number of frames processed.
+<P>
+<DT>Online speech enhancement:<DD>
+<DT><DD>
+<B>ctucopy -preset exten -fs 8000 -format_in raw -format_out raw -online_on -online_out &lt; </B><I>input</I> &gt; <I>output</I>
+
+<P>
+Reads 16 bit mono PCM data from <I>stdin</I> until EOF in machine
+native byte order and writes the enhanced output to <I>stdout</I>.
+<P>
+<DT>Feature extraction using default settings:<DD>
+<DT><DD>
+<B>ctucopy -fs 8000 -format_in wave -format_out htk -endian_out big -S list.txt</B>
+
+<P>
+Reads MS Wave files specified in the first column of the file
+list.txt, computes 13 speech features per frame and saves the results
+to HTK files specified in the second column of the file list.txt.
+<P>
+<DT>Feature extraction of HTK MFCCs:<DD>
+<DT><DD>
+<B>ctucopy -fs 8000 -format_in wave -format_out htk -endian_out big -preset mfcc -S list.txt</B>
+
+<P>
+The same as above, but with feature extraction settings suitable for
+MFCC features.
+<P>
+<DT>Feature extraction of original PLPs to a pfile:<DD>
+<DT><DD>
+<B>ctucopy -fs 8000 -format_in wave -format_out pfile=features.pfile -preset plp -S list.txt</B>
+
+<P>
+<DT>Using config file with the settings from the previous example:<DD>
+<DT><DD>
+<B>ctucopy -C config.txt </B>
+
+<P>
+Contents of config.txt:
+<P>
+# CtuCopy config file
+<BR>
+
+-fs 8000          # sampling freq
+<BR>
+
+-format_in wave   # MS wave
+<BR>
+
+-format_out pfile=features.pfile    
+<BR>
+
+-preset plp
+<BR>
+
+-S list.txt       # 2nd column of list.txt will be ignored
+<P>
+<DT>Advanced example of feature extraction:<DD>
+<DT><DD>
+<B>ctucopy -format_in raw -endian_in big -fs 8000 -format_out htk -endian_out big -S list.txt -preem 0.97 -fb_scale expolog -fb_shape rect -fb_eqld off -fb_definition 0-3000Hz:3-5/5filters,3000-4000Hz:1-1/1filters -nr_mode 2fwss -vad burg -nr_when beforeFB -fea_kind lpc -v</B>
+
+<P>
+Reads raw 16 bit mono PCM files in big endian coding from the input
+and saves the output to HTK files. Uses preemphasis. Filter bank is
+designed on expolog scale with rectangular filters with no
+overlap. Filter bank consists of the following filters. First, take
+the expolog scale and use an area from 0 Hz to 3000 Hz. Add to the
+filter bank the 3rd,
+4th and 5th filter out of 5 filters that would be placed equidistantly
+in that part of frequency axis. Second, add one
+more filter to the filter bank that starts at 3000 Hz and ends at 4000
+Hz. For noise suppression use two-pass spectral subtraction algorithm
+with internal Burg's VAD and perform the noise suppression before the
+filter bank. Compute LP cepstral coefficients. Be verbose so that
+settings can be double checked.
+<P>
+<DT>The other examples, how to work with ctucopy4 (CMVN, CMS, output in KALDI format) tool you can find in examples/run.sh script.<DD>
+<P>
+</DL>
+<A NAME="lbAN">&nbsp;</A>
+<H2>BUGS</H2>
+
+Please report all bugs not mentioned below to the author.
+<DL COMPACT>
+<DT>
+- In speech enhancement mode the amplitude spectrum is modified. It
+<DD>affects the dynamics of the signal which does not necessarily fit the
+16 bit range upon reconstruction. Thus, when a signal sample is bigger than
+the available dynamic range and the -v option is set, a warning
+message is printed locating the problematic sample and the sample is clipped. When the sample is
+larger than (2 x max value), then a warning message is printed always (unless quiet mode) and the sample is clipped. 
+<DT>
+- In speech enhancement mode the input and output signal lengths do
+<DD>not generally match. The input signal is read frame by frame until
+there are not enough samples for a full frame. It means the signal is
+cut at the position of the last available frame.  
+<DT>
+- MS Wave input and output formats do not support switching of byte
+<DD>order. They are always read in machine native format. 
+<DT>
+- When an external VAD file is used, there is no guarantee that the
+<DD>framing matches the input signal. User has to check this. 
+<DT>
+- In online mode no headers are written at the output (including HTK
+<DD>format) and for MS Wave input the number of samples from the file header
+is ignored. 
+<DT>
+- RASTA filtering is not implemented in current version.
+<DT>
+- Filter bank design: In case of rectangular window, filters are designed
+<DD>not to have any overlap. In any subset of filters (specified with start and stop
+frequencies) the boundary bins are by default included so that the design is
+intuitive. However, if there exist any two subsets that are
+joined (one ends at the point where the other begins), the bin common to both
+is only present in the lower subset so that there is no overlap &quot;in the middle&quot;.
+<P>
+<P>
+</DL>
+<A NAME="lbAO">&nbsp;</A>
+<H2>AUTHORS</H2>
+
+<P>
+
+Petr Mizera &lt;<A HREF="mailto:petr.mizera8@gmail.com">petr.mizera8@gmail.com</A>&gt;
+<BR>
+
+Petr Fousek &lt;<A HREF="mailto:p.fousek@gmail.com">p.fousek@gmail.com</A>&gt;
+<BR>
+
+Petr Pollak &lt;<A HREF="mailto:pollak@fel.cvut.cz">pollak@fel.cvut.cz</A>&gt;
+<BR>
+
+with kind help of Prague SpeechLab members.
+<P>
+<A NAME="lbAP">&nbsp;</A>
+<H2>HISTORY</H2>
+
+The first ctucopy version was built on <I>exten</I>, an original implementation
+of Extended Spectral Subtraction by Pavel Sovka, Petr Pollak and Jan Kybic,
+<BR>
+
+<I>P. Sovka, P. Pollak, J. Kybic, &quot;Extended Spectral Subtraction&quot;, EUSIPCO'96, Trieste, 1996.</I>
+<P>
+Once completed, it was published as an open source project on Interspeech 2003,
+<BR>
+
+<I> P. Fousek, P. Pollak, &quot;Additive Noise and Channel Distortion-Robust Parametrization Tool - Performance Evaluation on Aurora 2 &amp; 3&quot;, Eurospeech'03, Geneva, 2003.</I>
+<P>
+Later within a study of Lombard effect, an implementation of filter banks 
+was much generalized and rewritten,
+<BR>
+
+<I>H. Boril, P. Fousek, P. Pollak, &quot;Data-Driven Design of Front-End Filter bank for Lombard Speech Recognition&quot;, ICSLP'06, Pittsburgh, 2006.</I>
+<P>
+In 2012, as a reaction to enquiries of commercial subjects, ctucopy was released under Apache 2.0 licence.
+<P>
+Next work was focused on various cepstral normalization techniques like CMVN, various CMS.
+<BR>
+
+<I> M. Borsky, P. Mizera, P. Pollak, &quot;Noise and Channel Normalized Cepstral Features for Far-Speech Recognition&quot;, In Speech and Computer. Cham: Springer International
+Publishing AG, 2013.
+<P>
+The support KALDI format was added in work on ISP 2015.
+<BR>
+
+ P. Mizera, P. Pollak, M. Borsky, A. Kolman, M. Ernestus, &quot;Towards the DNN-HMM Recognition of Czech Casual Speech&quot;, SUBMITTED TO Interspeech 2015.
+<P>
+</I><A NAME="lbAQ">&nbsp;</A>
+<H2>COPYRIGHT</H2>
+
+Copyright 2013 Petr Fousek and FEE CTU Prague
+<BR>
+
+Copyright 2015 Petr Mizera and FEE CTU Prague
+<P>
+Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+<P>
+<BR>&nbsp;&nbsp;<A HREF="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</A>
+<P>
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+<P>
+<A NAME="lbAR">&nbsp;</A>
+<H2>VERSION</H2>
+
+This document is valid for CtuCopy versions 3.0 - 4.0
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS</A><DD>
+<DL>
+<DT><A HREF="#lbAF">INPUT/OUTPUT:</A><DD>
+<DT><A HREF="#lbAG">SEGMENTATION:</A><DD>
+<DT><A HREF="#lbAH">FILTER BANK:</A><DD>
+<DT><A HREF="#lbAI">NOISE REDUCTION:</A><DD>
+<DT><A HREF="#lbAJ">FEATURE EXTRACTION:</A><DD>
+<DT><A HREF="#lbAK">PRESETS:</A><DD>
+<DT><A HREF="#lbAL">MISCELLANEOUS:</A><DD>
+</DL>
+<DT><A HREF="#lbAM">EXAMPLES</A><DD>
+<DT><A HREF="#lbAN">BUGS</A><DD>
+<DT><A HREF="#lbAO">AUTHORS</A><DD>
+<DT><A HREF="#lbAP">HISTORY</A><DD>
+<DT><A HREF="#lbAQ">COPYRIGHT</A><DD>
+<DT><A HREF="#lbAR">VERSION</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 14:02:21 GMT, April 08, 2015
+</BODY>
+</HTML>

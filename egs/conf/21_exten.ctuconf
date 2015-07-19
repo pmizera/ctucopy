@@ -1,0 +1,6 @@
+# CtuCopy config file
+-fs 16000 
+-format_in raw 
+-format_out raw 
+
+-preset exten

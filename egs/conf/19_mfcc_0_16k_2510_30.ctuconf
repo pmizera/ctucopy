@@ -1,0 +1,9 @@
+# CtuCopy config file
+-fs 16000       # sampling freq
+-format_in htk  # 
+-format_out ark=data/19/mfcc.ark
+
+-endian_in  little
+-endian_out little
+
+-nfeacoefs 13

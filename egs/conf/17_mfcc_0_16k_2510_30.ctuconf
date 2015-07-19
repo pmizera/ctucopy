@@ -1,0 +1,24 @@
+# CtuCopy config file
+-fs 16000       # sampling freq
+-format_in raw  # 
+-format_out ark=data/17/mfcc.ark
+-endian_in  little
+-endian_out little
+
+-w 25 
+-s 10 
+-preem 0.97 
+-fb_scale mel 
+-fb_shape triang 
+-fb_power on
+-fb_definition 30filters 
+-nr_mode none 
+-fb_eqld off 
+-fb_inld off 
+-fea_kind dctc
+-fea_ncepcoefs 12 
+-fea_c0 on 
+-fea_E off 
+-fea_lifter 22 
+-fea_rawenergy off
+-fea_trap 5

@@ -1,0 +1,11 @@
+# CtuCopy config file
+-fs 16000       # sampling freq
+-format_in htk
+-format_out htk   
+-endian_in  little
+-endian_out  little
+
+-nfeacoefs 13
+
+-nr_mode none 
+-apply_cmvn data/03/cmvn.stat

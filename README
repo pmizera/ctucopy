@@ -1,0 +1,32 @@
+This is CtuCopy - Universal speech enhancer and parametrizer.
+
+Written by Petr Fousek, Petr Mizera and other contributors from Speech Processing Group, Faculty of Electrical Engineering, Czech Technical University in Prague.
+
+Since version 3.2.2 CtuCopy is distributed under Apache 2.0 licence.
+Former versions were released under GPL 2 license.
+Thanks to Petr Schwarz (Speech@FIT VUT Brno) for pfile I/O routines.
+
+Copyright (C) 2003-2013 Petr Fousek, p.fousek@gmail.com,
+              2013-2015 Petr Mizera, petr.mizera8@gmail.com,
+              SpeechLab at FEE CTU Prague,
+              Technicka 2, 166 27 Prague 6, Czech republic.
+              http://noel.feld.cvut.cz/speechlab
+
+DOCUMENTATION:
+
+  See a manpage in "man" folder.
+  Run 'doxygen Doxyfile' for a html documentation (in folder "doc/html").
+
+
+COMPILATION:
+
+  fftw library is required for compilation (http://www.fftw.org).
+  
+  To build ctucopy4:
+
+    cd src
+    make clean && make
+
+EXAMPLES:
+  
+  See the run.shin "egs" folder.

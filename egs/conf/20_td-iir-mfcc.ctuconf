@@ -1,0 +1,15 @@
+# CtuCopy config file
+-fs 16000       # sampling freq
+-format_in raw  # 
+-format_out htk
+-endian_in  little
+-endian_out little
+
+-w 30
+-s 10
+
+-nr_mode none
+
+-fea_kind td-iir-mfcc
+-filters conf/filterbank_coefs.asc
+-fea_ncepcoefs 12
