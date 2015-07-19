@@ -7,3 +7,7 @@ CtuCopy implements several speech enhancing methods based on spectral subtractio
 Bank of filters offers a set of frequency scales (melodic, Bark, expolog, linear) and various filter shapes (triangular, rectangular, trapezoidal same as time-domain IIR based implementation) which can be combined to form standard and user-defined filter banks.
 
 In feature extraction mode a number of common features can be extracted from original or enhanced speech, e.g. LPC, PLP, MFCC or magnitude spectrum. Current version also implements TRAP-DCT features. Features can be saved either in HTK, pfile, or KALDI format.
+
+EXAMPLES:
+
+  See the run.sh in "egs" folder.
