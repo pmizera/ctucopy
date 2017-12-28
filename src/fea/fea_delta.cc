@@ -100,26 +100,26 @@ bool deltaFEA::process_frame() {
     }
 
     // copy fea vector to buffer
-    int aa=start;
-    if(aa==0)aa=dwlen-1;
-    else aa--;
+    int fea_x=start;
+    if(fea_x==0)fea_x=dwlen-1;
+    else fea_x--;
 
-    aa%=dwlen;
+    fea_x%=dwlen;
     for(int i=0;i<nfea;i++){
-        b(aa,i) = fvec[i];
+        b(fea_x,i) = fvec[i];
     }
 
     if(o->fea_trap) trap();
     else delta();     // calculate delta Coefficients
 
-    int qqq=aa-delta_w;
-    if(qqq<0)
-      qqq=dwlen+qqq;
+    int ofea_x=fea_x-delta_w;
+    if(ofea_x<0)
+      ofea_x=dwlen+ofea_x;
 
-    qqq%=dwlen;
+    ofea_x%=dwlen;
     if(!o->fea_trap){
       for (int i=0;i<nfea;i++){
-        ofvec[i] = b(qqq,i);
+        ofvec[i] = b(ofea_x,i);
        }
     }
     end=start;
@@ -170,12 +170,8 @@ bool deltaFEA::trap() {
     for(int i=0; i<fea_c; i++){
       for(int j=0; j<dwlen; j++){
         fvec[i*dwlen+j] = b((start+j)%dwlen,i);
-  //      cout<<" "<< b((start+j)%dwlen,i);
-  //      cout<<" "<< (start+j)%dwlen;
       }
     }
-//cout<<endl;
-
     return true;
 };
 
@@ -194,13 +190,13 @@ bool deltaFEA::flush_frame() {
       if(o->fea_trap) trap();
       else delta();               // calculate delta Coefficients
 
-      int qqq=start-delta_w-1;
-      if(qqq<0)
-        qqq=dwlen+qqq;
+      int ofea_x=start-delta_w-1;
+      if(ofea_x<0)
+        ofea_x=dwlen+ofea_x;
 
-      qqq%=dwlen;
+      ofea_x%=dwlen;
       for (int i=0;i<nfea;i++){
-          ofvec[i] = b(qqq,i);
+          ofvec[i] = b(ofea_x,i);
       }
       start++; start%=dwlen; // move on
       avail++;
