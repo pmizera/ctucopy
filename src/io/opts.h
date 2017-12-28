@@ -93,7 +93,42 @@ class opts {
  	char preset[39];                    // output features presets (mfcc, plpc....)
         int fea_trapdct_traplen;            // length of the TRAP to which the DCT is applied
         int fea_trapdct_ndct;               // number of the first DCT coeffs to output (per band)
- 	
+ 
+        // Voice Activity Detection
+        char vad_apply_mode[39];            // turn on VAD and silence/drop non-speech segments
+        char vad_out_mode[39];              // turn on VAD and save VAD output file
+
+        char vad_out[999];                  // VAD output file for single-file mode
+
+        char vad_cri_mode[39];              // VAD criterion function
+        char vad_thr_mode[39];              // VAD thresholding method
+
+        bool vad_energy_db;                 // normalize energy in decibels
+
+        char vad_cepdist_mode[39];          // cepstral distance mode
+        double vad_cepdist_p;               // cepstral background estimation smoothness
+        int vad_cepdist_init;               // number of segments to force updating cepstral background estimation
+
+        int vad_lpc_coefs;                  // number of LPC cepstral coefficients
+
+        double vad_absolute_thr;            // absolute threshold placement
+        int vad_perc_init;                  // number of initial segments when criterial value is not confident
+        double vad_perc_thr;                // percentual threshold placement
+
+        int vad_adapt_init;                 // number of voiceless init segments for adaptive threshold
+        double vad_adapt_q;                 // threshold remembering coefficient q
+        double vad_adapt_za;                // speech to background distance parameter za
+
+        int vad_dyn_init;
+        double vad_dyn_perc;                // vad dynamic threshold percentrual placement
+        double vad_dyn_min;
+        double vad_dyn_qmaxinc;
+        double vad_dyn_qmaxdec;
+        double vad_dyn_qmindec;
+        double vad_dyn_qmininc;
+
+        int vad_filter_order;               // vad output median filter order
+
  	// Misc.
 	int window;							// window length in samples (will be computed)
 	int wshift;       					// window shift in samples

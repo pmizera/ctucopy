@@ -43,7 +43,8 @@ class POST {
         bool sum_cv();
         bool stat_cm();
         bool stat_cv();
-        bool cmvn();
+        bool process_frame();
+        void clean();
         int add_spk(char* id_spk);
         ~POST();
 };

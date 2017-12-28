@@ -26,6 +26,7 @@
 #include "../fea/fea.h"
 #include "out.h"
 #include "../fea/post.h"
+#include "../vad/vad.h"
 
 class BATCH {
 	//
@@ -36,14 +37,16 @@ class BATCH {
 	// and then closes all objects.
 
 	bool do_fea;	// flag whether to include FB and FEA objects
+        bool do_vad;
         char **list_ID_spk;
         int out_fea;
-        int process_step;
+        int process_stage;
 	opts  *o;		// options class
 	IN    *in;		// input class
 	NR    *nr;		// noise reduction class
 	FB    *fb;		// filter bank class
 	FEA   *fea;		// feature extraction class
+        VAD   *vad;             // voice activity detection class
 	deltaFEA   *fea_d;	// delta
 	deltaFEA   *fea_d_d;    // delta-delta
 	deltaFEA   *fea_d_d_d;  // delta-delta-delta
@@ -53,9 +56,11 @@ class BATCH {
         IN    *in_stat_cmvn;    // input object for load stat. cmvn
 	void init_out(Vec<double> *, Vec<double> *);
   void process_frame();
+  void save_frame();
   void cmvn_stat();
   void fea_delta();
   void flush_fea();
+  void flush_vad();
   void init_cmvn(Vec<double> *);
   void init_delta(Vec<double> *, Vec<double> *);
   void init_post(Vec<double> *);
@@ -66,22 +71,4 @@ public:
 };
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -31,9 +31,15 @@ BATCH::BATCH (opts *o_in) {
          do_fea = false;
     }
 
+    if(strcmp(o->vad_apply_mode, "none") || strcmp(o->vad_out_mode, "none")) {
+        do_vad = true;
+    } else {
+        do_vad = false;
+    }
+
     in = new IN(o);
     out_fea=1;
-    process_step=0;
+    process_stage=0;
     out = NULL;out_stat_cmvn = NULL;fea = NULL;post = NULL;fb = NULL;nr = NULL;
     in_stat_cmvn = NULL;fea_d = NULL;fea_d_d = NULL;fea_d_d_d = NULL;
 
@@ -59,10 +65,35 @@ BATCH::BATCH (opts *o_in) {
                out = new OUT(o, in->_Xsabs, in->_Xsph, in->E);
          }
     }
+
 };
 void BATCH::init_out(Vec<double> *Xabs, Vec<double> * Xph) {
 	// properly initializes output class
 	// output type = features (htk/pfile/ibm)
+
+        if(do_vad){
+          Vec<double> *FeaFvecOut;
+          vad = new VAD(o, in->_Xsabs, in->_Xsph, Xabs, Xabs, &FeaFvecOut);
+	  if(0==strcmp(o->fea_kind,"dctc")) { // DCT-derived features, c0 represents energy after NR,FB
+	    if(o->nr_when == o->afterFB){
+               // we'd like to compute E after NR but in case FB precedes NR it is
+	       // impossible -> get normal energy before FB instead
+               out = new OUT(o, FeaFvecOut, Xph, in->E);	// IN decides how to compute E
+            }else{
+               // this is better, get E after NR right before FB
+                  out = new OUT(o, FeaFvecOut, Xph, nr->E);
+            }
+          }else{
+            // LPC-derived fea -> E derived from 1st autocorr coeff
+            // or Spectral features -> E computed from input spectrum (after FB,NR)
+            if(0==strcmp(o->format_in,"htk")) {
+              out = new OUT(o, FeaFvecOut, Xph, in->E);
+            }else{
+              out = new OUT(o, FeaFvecOut, Xph, fea->E);
+            }
+          }
+          return;
+        }
 
 	if(o->fea_rawenergy){
           out = new OUT(o, Xabs, Xph, in->E); 		// E computed at the very beginning, IN knows how
@@ -88,6 +119,7 @@ void BATCH::init_out(Vec<double> *Xabs, Vec<double> * Xph) {
         }
 };
 
+// TODO: move it to fea_delta.cc
 void BATCH::init_delta(Vec<double> * in_fvec, Vec<double> * in_Xsph){
           if(o->n_order>=1) fea_d     = new deltaFEA(o,in_fvec,2,o->d_win);
           if(o->n_order>=2) fea_d_d   = new deltaFEA(o,fea_d->_fvec,3,o->a_win);
@@ -118,6 +150,8 @@ void BATCH::init_cmvn(Vec<double> * in_fvec){
               o->stat_cmvn=true;
               init_post(in_fvec);
             }
+          }else if(o->fea_Z_exp>0 || o->fea_Z_block>0){
+            init_post(in_fvec);
           }else if(o->stat_cmvn){
             out=NULL; out_fea=0; // only Statistics for CMVN
             init_post(in_fvec);
@@ -128,11 +162,13 @@ void BATCH::init_post(Vec<double> * in_fvec) {
              if(o->n_order==1) post = new POST(o, fea_d->_fvec);
              if(o->n_order==2) post = new POST(o, fea_d_d->_fvec);
              if(o->n_order==3) post = new POST(o, fea_d_d_d->_fvec);
-             char tmp[(int)strlen(o->format_out)] ;
-             strcpy(tmp,o->format_out);
-             strcpy(o->format_out,"cmvn");
-             out_stat_cmvn  = new OUT(o, post->_mvec_cmean, post->_mvec_cvar,post->_list_ID_spk);
-             strcpy(o->format_out,tmp);
+             if(!(o->fea_Z_exp>0 || o->fea_Z_block>0)){
+               char tmp[(int)strlen(o->format_out)] ;
+               strcpy(tmp,o->format_out);
+               strcpy(o->format_out,"cmvn");
+               out_stat_cmvn  = new OUT(o, post->_mvec_cmean, post->_mvec_cvar,post->_list_ID_spk);
+               strcpy(o->format_out,tmp);
+             }
 };
 void BATCH::fea_delta(){//-------------------------- Compute differencial features
      if(o->n_order>=1){
@@ -156,15 +192,15 @@ void BATCH::fea_delta(){//-------------------------- Compute differencial featur
      }
 }
 void BATCH::cmvn_stat(){//-------------------------- Accumulate statistic for CMVN
-       if(!process_step && o->stat_cmvn){
+       if(!process_stage && o->stat_cmvn){
          post->sum_fea();
-       }else if(process_step==1 && o->stat_cmvn){
+       }else if(process_stage==1 && o->stat_cmvn){
          post->sum_cv();
-       }else if((!process_step || process_step==2) && o->apply_cmvn){
-         post->cmvn();
-         out->save_frame();
+       }else if((!process_stage || process_stage==2) && o->apply_cmvn || (o->fea_Z_exp>0 || o->fea_Z_block>0)){
+         post->process_frame();
+         save_frame();
        }else{
-         out->save_frame();// fea can now be delayed
+         save_frame();// fea can now be delayed
        }
 }
 void BATCH::process_frame() {
@@ -184,20 +220,40 @@ void BATCH::process_frame() {
        }else if(o->stat_cmvn || o->apply_cmvn){//----- Do CMVN (both compute statistic and aplly CMVN on features) ?
          cmvn_stat();
        }else if(0==strcmp(o->fea_kind,"td-iir-mfcc")) {//---- Do td-iir-mfcc fea
-         out->save_frame();
+         save_frame();
        }else{ //-------------------------------------- Do only noise reduction?
          if(nr != NULL)//------only for create ark file for KALDI from HTK input features
-           nr->process_frame();
-         out->save_frame();
+             nr->process_frame();
+         save_frame();
        }
-// add VAD
+}
+
+void BATCH::save_frame() {
+    if(do_vad){
+        vad->process_frame();
+        vad->silence_frame();
+        vad->save_frame();
+        if(!vad->vad_ready)
+          return;
+        if(vad->drop_frame())
+            return;
+    }
+    out->save_frame();
+}
+
+void BATCH::flush_vad() {
+    while(vad->flush_frame()){
+        vad->save_frame();
+        if(!vad->drop_frame())
+            out->save_frame();
+    }
 }
 
 void BATCH::flush_fea() {
        if(do_fea || (o->fea_delta||o->fea_trap)){
          if(!((o->fea_delta||o->fea_trap))){
             while(fea->flush_frame()){ // fea->flush_frame()
-                  out->save_frame();
+                  cmvn_stat();
             }
          }
          if(o->n_order>=1){
@@ -206,14 +262,14 @@ void BATCH::flush_fea() {
                    if(fea_d_d->process_frame()){
                      if(o->n_order>=3){
                        if(fea_d_d_d->process_frame()){
-                         out->save_frame();
+                         cmvn_stat();
                        }
                      }else{
-                       out->save_frame();
+                       cmvn_stat();
                      }
                    }
                  }else{
-                   out->save_frame();
+                   cmvn_stat();
                  }
            }
          }
@@ -221,133 +277,149 @@ void BATCH::flush_fea() {
            while(fea_d_d->flush_frame()){
                 if(o->n_order>=3){
                   if(fea_d_d_d->process_frame()){
-                     out->save_frame();
+                     cmvn_stat();
                   }
                 }else{
-                  out->save_frame();
+                  cmvn_stat();
                 }
            }
          }
          if(o->n_order>=3){
            while(fea_d_d_d->flush_frame()){
-                out->save_frame();
+                cmvn_stat();
            }
          }
+       }
+       if(do_vad){
+         flush_vad();
+         vad->clean();
        }
 }
 int BATCH::process() {
     // ------- SINGLE FILE MODE -------
-	if (o->pipe_in || 0!=strcmp(o->in,"")) {	// output is also single mode (ensured by OPTS)
-    if (o->verbose) cerr << "processing: " << o->in << " ";
+    if (o->pipe_in || 0!=strcmp(o->in,"")) {	// output is also single mode (ensured by OPTS)
+      if (o->verbose) cerr << "processing: " << o->in << " ";
+      in->new_file(o->in);		// in knows when to use o->in
+      nr->new_file();
 
-		in->new_file(o->in);		// in knows when to use o->in
-       nr->new_file();
+      if(do_fea) {
+        fb->new_file();
+        fea->new_file();
+      }
 
-		if(do_fea) {
-		  fb->new_file();
-		  fea->new_file();
-		}
+      out->new_file(o->out);		// out knows when to use o->out
+      vad->new_file(o->vad_out);
 
-	  out->new_file(o->out);		// out knows when to use o->out
-
-		// loop over segments
-		int segs = 0; // frames counter
-		while (in->get_frame()) {
+      // loop over segments
+      int segs = 0; // frames counter
+      while (in->get_frame()) {
         process_frame();
-	  }
+      }
 
-    // possibly flush 'fea'
-    flush_fea();
+      // possibly flush 'fea'
+      flush_fea();
 
-	  if (o->verbose) cerr << "- " << segs << " frames." << endl;
-	  return 0;
-	}
+      if (o->verbose) cerr << "- " << segs << " frames." << endl;
+      return 0;
+    }
+
     // ------- BATCH MODE -------
-	char line[1000]; 		// to store one pair <input file - output file>
-	char *fin, *fout, *ID_spk;
+    char line[1000]; 		// to store one pair <input file - output file>
+    char *fin, *fout, *ID_spk, *foutvad;
 
-        int num_spk=0;
-        int ii;
+    int num_spk=0;
+    int post_CN_stage;
+    if(o->stat_cmvn){
+      post_CN_stage=1;              // Statistics for cmvn will computed.
+      if(o->apply_cmvn)
+        post_CN_stage=2;            // CMVN will applied to features.
+    }else{
+      post_CN_stage=0;              // Standard processing
+    };
+
+    for(int stage=0; stage<=post_CN_stage; stage++){
+      process_stage = stage;
+      ifstream list;
+      if (o->list == NULL) throw "BATCH: Nothing to do!";
+      list.open(o->list); // open list
+      if(!list) throw "BATCH: Cannot open list file!";
+
+      if(0==strcmp(o->fea_kind,"td-iir-mfcc"))
+        in->loadf_filters(o->ffilters);
+
+      while(list.getline(line,1000)){      // loop over all files
+        fin    = strtok(line," \t");        // input file name
+        fout   = strtok (NULL," \t");       // output file name (in case of pfile output discarded)
+        ID_spk = strtok(NULL," \t");        // ID speaker for CMVN
+        foutvad = strtok (NULL," \t");      // VAD output file name
+
+        if(!fin || !fout) throw "BATCH: Bad list format!";
+        if(do_vad && !foutvad) throw "BATCH: Bad list format!";
+        if(o->verbose) cerr << "processing: " << fin << " ";
+
         if(o->stat_cmvn){
-          ii=1;             // Statistics for cmvn will computed.
-          if(o->apply_cmvn)
-           ii=2;            // CMVN will applied to features.
-        }else{
-           ii=0;            // Standard processing
-        };
+          if(!ID_spk){
+             ID_spk=fout;
+             if(!fin || !ID_spk) throw "BATCH: Bad list format for computed stat. cmvn!";
+          }
+          num_spk=post->add_spk(ID_spk);
+        }else if(o->apply_cmvn){
+          if(!fin || !ID_spk || !fout) throw " Bad list format for applying cmvn!";
+          num_spk=post->add_spk(ID_spk);
+        }
 
- for(int step=0;step<=ii;step++){
-     process_step=step;
-     ifstream list;
-	   if (o->list == NULL) throw "BATCH: Nothing to do!";
-	     list.open(o->list); // open list
-	   if(!list) throw "BATCH: Cannot open list file!";
+        // announce new file, let objects close the previous and open a new one
+	in->new_file(fin);
+	if(do_fea){
+	  fb->new_file();
+	  fea->new_file();
+	  if(o->n_order>=1) fea_d->new_file();
+	  if(o->n_order>=2) fea_d_d->new_file();
+	  if(o->n_order==3) fea_d_d_d->new_file();
+	}else if(o->fea_delta||o->fea_trap){
+	  if(o->n_order>=1) fea_d->new_file();
+	  if(o->n_order>=2) fea_d_d->new_file();
+	  if(o->n_order==3) fea_d_d_d->new_file();
+        }
 
-     if(0==strcmp(o->fea_kind,"td-iir-mfcc"))
-       in->loadf_filters(o->ffilters);
-
-	while(list.getline(line,1000)){      // loop over all files
-         fin    = strtok(line," \t");        // input file name
-         fout   = strtok (NULL," \t");       // output file name (in case of pfile output discarded)
-         ID_spk = strtok(NULL," \t");        // ID speaker for CMVN
-
-	     if(!fin || !fout) throw "BATCH: Bad list format!";
-	     if(o->verbose) cerr << "processing: " << fin << " ";
-
-       if(o->stat_cmvn){
-         if(!ID_spk){
-           ID_spk=fout;
-           if(!fin || !ID_spk) throw "BATCH: Bad list format for computed stat. cmvn!";
-         }
-         num_spk=post->add_spk(ID_spk);
-       }else if(o->apply_cmvn){
-         if(!fin || !ID_spk || !fout) throw " Bad list format for applying cmvn!";
-           num_spk=post->add_spk(ID_spk);
-       }
-	     // announce new file, let objects close the previous and open a new one
-	     in->new_file(fin);
-	     if(do_fea){
-	       fb->new_file();
-	       fea->new_file();
-	       if(o->n_order>=1) fea_d->new_file();
-	       if(o->n_order>=2) fea_d_d->new_file();
-	       if(o->n_order==3) fea_d_d_d->new_file();
-	     }else if(o->fea_delta||o->fea_trap){
-	       if(o->n_order>=1) fea_d->new_file();
-	       if(o->n_order>=2) fea_d_d->new_file();
-	       if(o->n_order==3) fea_d_d_d->new_file();
-       }
-
-       if(strcmp(o->format_in,"htk") && strcmp(o->fea_kind,"td-iir-mfcc")){
+        if(strcmp(o->format_in,"htk") && strcmp(o->fea_kind,"td-iir-mfcc")){
           nr->new_file();
-       }
+        }
 
-       if(out_fea){
-         if(step==ii)
-           out->new_file(fout);
-         if( 0==strcmp(o->format_out,"ark") && ((step==0||step==1 ) && o->stat_cmvn) )
-           out_fea=0;
-       }
-       int segs = 0; // frames counter
-       while(in->get_frame()){  //  loop over all segments in the file
-            process_frame();
-            segs++;
-       }
-       // possibly flush 'fea' ???
-       flush_fea();
+        if(out_fea){
+          if(stage==post_CN_stage){
+            out->new_file(fout);
+            if(o->fea_Z_exp>0 || o->fea_Z_block>0)
+              post->clean();
+          }
+          if( 0==strcmp(o->format_out,"ark") && ((stage==0||stage==1 ) && o->stat_cmvn) )
+            out_fea=0;
+        }
 
-       if(o->verbose) cerr << "- " << segs << " frames." << endl;
-  }// END - loop over all files
-  if(!step && o->stat_cmvn){
-    post->stat_cm();
-  }else if(step==1 && o->stat_cmvn){//-------------- Save statistics
-    post->stat_cv();
-    out_stat_cmvn->new_file(o->fcmvn_stat_out);
-    out_stat_cmvn->save_frame(num_spk);
-    out_fea=1;
-  }
- }//---- END for(int step=0;step<=ii;step++)
- return 0;
+        if(do_vad)
+          vad->new_file(foutvad);
+
+        int segs = 0; // frames counter
+        while(in->get_frame()){  //  loop over all segments in the file
+          process_frame();
+          segs++;
+        }
+        // possibly flush 'fea' ???
+        flush_fea();
+
+        if(o->verbose) cerr << "- " << segs << " frames." << endl;
+      }// END - loop over all files
+
+      if(!stage && o->stat_cmvn){
+        post->stat_cm();
+      }else if(stage==1 && o->stat_cmvn){ // Save statistics
+        post->stat_cv();
+        out_stat_cmvn->new_file(o->fcmvn_stat_out);
+        out_stat_cmvn->save_frame(num_spk);
+        out_fea=1;
+      }
+   }
+   return 0;
 }
 
 BATCH::~BATCH () {
@@ -376,5 +448,7 @@ BATCH::~BATCH () {
       delete fea_d_d_d;
     if(out_stat_cmvn != NULL)
       delete out_stat_cmvn;
+    if(do_vad)
+      delete vad;
 };
 

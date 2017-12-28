@@ -21,7 +21,6 @@
 #include "out.h"
 #include "pfile.h"
 #include <math.h>
-#include "../base/types.h"
 
 _OUT::_OUT(opts* o_in, Vec<double> *Xabs, Vec<double> *Xph, double * _E) {
 	o = o_in;
@@ -68,11 +67,6 @@ class htkOUT : public _OUT {
 		int fea_size;						// feature vector size
 		int Xsize;							// Xabs size (either spectrum or fea vector size without c0, E)
 		float * obuffer;					// output buffer
-                int num_frame;
-                int x_cbuffer;
-//                float p;
-		float * sumM;                                   // output buffer CMS
-                float ** Z_obufferr;
 		unsigned int get_fea_size();	// returns overall HTK feature size (including E, c0)
 		void close();						// close one file
  	public:
@@ -93,22 +87,6 @@ htkOUT::htkOUT(opts* o, Vec<double> *_Xsabs, Vec<double> *_Xsph, double * E): _O
         Xsize = _Xsabs->get_size();     // size of input Xabs vector (disregarding E, c0)
 	try {
 		obuffer = new float[fea_size];
-                num_frame=0;
-                x_cbuffer=0;
-//                p=0.05;
-                sumM = new float[fea_size];
-                for(int i=0; i < fea_size; i++)
-                   sumM[i] = 0;
-
- Z_obufferr=(float**)malloc(o->length_b*sizeof(float));
- for(int i=0; i< o->length_b;i++){
-    Z_obufferr[i]=(float*)malloc(fea_size*sizeof(float));
- }
- for(int i=0;i < o->length_b;i++){
-    for(int j=0;j<fea_size;j++){
-       Z_obufferr[i][j]=0;
-    }
- }
     }
     catch (...) { throw ("OUT: Not enough memory!"); }
 
@@ -176,6 +154,9 @@ void htkOUT::new_file(char * filename) {
 
 	if (o->fea_c0) kind = kind | 020000;       	// set c0 bit
 	if (o->fea_E)  kind = kind | 000100;   		// set E bit
+	if (o->fea_delta && o->n_order>=1)  kind = kind | 000400;   		// set D bit
+	if (o->fea_delta && o->n_order>=2)  kind = kind | 001000;   		// set A bit
+	if (o->fea_delta && o->n_order==3)  kind = kind | 100000;   		// set T bit
         uSint fea_size_BytesSWP = fea_size_Bytes;
 
 	if (o->swap_out) {
@@ -191,84 +172,49 @@ void htkOUT::new_file(char * filename) {
 };
 
 void htkOUT::save_frame() {
-    Vec<double> & X = *_Xsabs;
+   Vec<double> & X = *_Xsabs;
 
-   if(1==strcmp(o->format_in, "htk")){
-	// fill in output buffer
+   if(0==strcmp(o->format_in, "htk")){
+     for(int i=0; i<fea_size; i++)
+       obuffer[i] = (float)X[i];
+   }else{
+        // fill in output buffer
         if(o->fea_trap) strcpy(o->fea_kind,"spec");
-	if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec")) {	// spectrum output
+        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec")) {       // spectrum output
             for(int i=0; i<Xsize; i++)
                obuffer[i] = (float) X[i];
             if(o->fea_E)
                obuffer[Xsize] = (float) *E;
 	}else{
            // for a[k] or c[k], feature vector starts from index 1 not 0 !
-        for(int j=0;j<=o->n_order;j++){
-          for(int i=(((o->fea_ncepcoefs+1)*j)+1);i<((o->fea_ncepcoefs+1)*(j+1));i++){
-             obuffer[i - 1]   = (float) X[i];
-          }
-          if(o->fea_c0){
-              obuffer  [(o->fea_ncepcoefs)*(j+1)+j] = (float) X[(o->fea_ncepcoefs+1)*j]; // obuffer  [Xsize - 1] = (float) X[0];
-              if(o->fea_E){
-                obuffer[Xsize] = (float) *E; //                 obuffer[(o->fea_ncepcoefs+1)*(j+1)] = (float) *E;
-              }
-          }else if (o->fea_E)
-              obuffer[(o->fea_ncepcoefs)*(j+1)+j] = (float) *E;
-        }
-                //CMS
-          	if(o->fea_Z_exp>0){
-                  for(int i=0; i < (o->fea_ncepcoefs+1); i++){
-                    sumM[i] = sumM[i]*(o->fea_Z_exp) + obuffer[i]*(1-o->fea_Z_exp);
-                    obuffer[i] -= sumM[i];
-                  }
+           for(int j=0;j<=o->n_order;j++){
+             for(int i=(((o->fea_ncepcoefs+1)*j)+1);i<((o->fea_ncepcoefs+1)*(j+1));i++){
+                obuffer[i - 1]   = (float) X[i];
+             }
+             if(o->fea_c0){
+                obuffer  [(o->fea_ncepcoefs)*(j+1)+j] = (float) X[(o->fea_ncepcoefs+1)*j]; // obuffer  [Xsize - 1] = (float) X[0];
+                if(o->fea_E){
+                  obuffer[Xsize] = (float) *E; //                 obuffer[(o->fea_ncepcoefs+1)*(j+1)] = (float) *E;
                 }
-                if(o->fea_Z_block>0){
-                  x_cbuffer = num_frame % o->length_b;
-                  for(int j=0;j<(o->fea_ncepcoefs+1);j++){
-                    Z_obufferr[x_cbuffer][j] = obuffer[j];
-                  }
-
-                  if(num_frame >= o->length_b-1){
-                     for(int i=0; i < (o->fea_ncepcoefs+1); i++)
-                       sumM[i] = 0;
-
-                     for(int i=0; i < (o->fea_ncepcoefs+1); i++){
-                        for(int  x = 0; x < o->length_b; x++){
-                           sumM[i] += Z_obufferr[x][i];
-                        }
-                     }
-                     for(int i=0; i<(o->fea_ncepcoefs+1); i++)
-                       sumM[i] /=  o->length_b;
-                  }
-                  for(int i=1; i<(o->fea_ncepcoefs+1); i++)
-                      obuffer[i] -= sumM[i];
-                }
+             }else if (o->fea_E)
+               obuffer[(o->fea_ncepcoefs)*(j+1)+j] = (float) *E;
+           }
         }
-   }else{
-      for(int i=0; i<fea_size; i++)
-           obuffer[i] = (float)X[i];
    }
 
-     num_frame++;
+   if(o->swap_out)
+     for(int i=0; i<fea_size; i++)
+       SwapFloat(&obuffer[i]);
 
-     if(o->swap_out)
-       for(int i=0; i<fea_size; i++)
-         SwapFloat(&obuffer[i]);
-
-     // write it
-     if(fea_size != (int) fwrite(obuffer, sizeof(float), fea_size, fout))
-       throw "OUT: Error in stream writing!";
-     frames++;
+   // write it
+   if(fea_size != (int) fwrite(obuffer, sizeof(float), fea_size, fout))
+     throw "OUT: Error in stream writing!";
+   frames++;
 };
 
 htkOUT::~htkOUT() {
 	close();
 	delete [] obuffer;
-        delete [] sumM;
-        for(int i=0;i < o->length_b;i++){
-          free(Z_obufferr[i]);
-        }
-        free(Z_obufferr);
 };
 
 // ---------------- pfile output ------------------------------
@@ -280,10 +226,6 @@ class pfileOUT : public _OUT {
 		int fea_size;		// full feature vector size
 		int Xsize;			// feature vector size without E, c0
 		float * obuffer;	// buffer
-                float * sumM;           // buffer CMS
-                float ** Z_obufferr;
-                int num_frame;
-                int x_cbuffer;
 
 		bool firstframe;	// a little workaround (needed for pfile.h class)
 		unsigned int *lab;	// in PFILE format also labels can be stored, this is a dummy ptr to labels
@@ -305,22 +247,6 @@ pfileOUT::pfileOUT(opts* o, Vec<double> *_Xsabs, Vec<double> *_Xsph, double * E)
 	try {
 		obuffer = new float[fea_size];	// data
 		lab = new unsigned int;		// this needs to be available to pfile class, but will not be used
-                num_frame=0;
-                x_cbuffer=0;
-//                p=0.05;
-                sumM = new float[fea_size];
-                for(int i=0; i < fea_size; i++)
-                   sumM[i] = 0;
-
-                Z_obufferr=(float**)malloc(o->length_b*sizeof(float));
-                for(int i=0; i< o->length_b;i++){
-                  Z_obufferr[i]=(float*)malloc(fea_size*sizeof(float));
-                }
-                for(int i=0;i < o->length_b;i++){
-                  for(int j=0;j<fea_size;j++){
-                    Z_obufferr[i][j]=0;
-                  }
-                }
         }
         catch (...) { throw ("OUT: Not enough memory!"); }
         if (!pf.open(o->pfilename,"w", size, 0))
@@ -375,35 +301,6 @@ void pfileOUT::save_frame() {
 	  }
          }
         }
-                //CMS
-                if(o->fea_Z_exp>0){
-                  for(int i=0; i < (o->fea_ncepcoefs+1); i++){
-                    sumM[i] = sumM[i]*(o->fea_Z_exp) + obuffer[i]*(1-o->fea_Z_exp);
-                    obuffer[i] -= sumM[i];
-                  }
-                }
-                if(o->fea_Z_block>0){
-                  x_cbuffer = num_frame % o->length_b;
-                  for(int j=0;j<(o->fea_ncepcoefs+1);j++){
-                    Z_obufferr[x_cbuffer][j] = obuffer[j];
-                  }
-
-                  if(num_frame >= o->length_b-1){
-                     for(int i=0; i < (o->fea_ncepcoefs+1); i++)
-                       sumM[i] = 0;
-
-                     for(int i=0; i < (o->fea_ncepcoefs+1); i++){
-                        for(int  x = 0; x < o->length_b; x++){
-                           sumM[i] = sumM[i] + Z_obufferr[x][i];
-                        }
-                     }
-                     for(int i=0; i<(o->fea_ncepcoefs+1); i++)
-                       sumM[i] =  sumM[i] / o->length_b;
-                  }
-                  for(int i=1; i<(o->fea_ncepcoefs+1); i++)
-                      obuffer[i] = obuffer[i]-sumM[i];
-                }
-        num_frame++;
 	// write it
 	pf.write(obuffer, lab);
 };
@@ -413,11 +310,6 @@ pfileOUT::~pfileOUT() {
 	pf.close();			// close pfile
 	delete lab;
 	delete [] obuffer;
-        delete [] sumM;
-        for(int i=0;i < o->length_b;i++){
-          free(Z_obufferr[i]);
-        }
-        free(Z_obufferr);
 };
 
 
@@ -737,10 +629,6 @@ class arkOUT : public _OUT {
                   int fea_size;           // full feature vector size
                   int Xsize;              // feature vector size without E, c0
                   float * obuffer;        // buffer
-                  float * sumM;           // buffer CMS
-                  float ** Z_obufferr;
-                  long int num_frame;
-                  int x_cbuffer;
 
                   bool firstframe;        // a little workaround (needed for pfile.h class)
                   uSint get_fea_size();   // includes also E, c0
@@ -759,32 +647,13 @@ class arkOUT : public _OUT {
 
 arkOUT::arkOUT(opts* o, Vec<double> *_Xsabs, Vec<double> *_Xsph, double * E) : _OUT(o,_Xsabs,_Xsph, E) {
 	// get feature size
-//o->fea_kind
 	fea_size = get_fea_size();    	// feature vector size
-//	fea_size =  fea_ncepcoefs;        // feature vector size
         Xsize = _Xsabs->get_size();    	// size of input Xabs vector (disregarding E, c0)
 	firstframe = true;		// only in case of the very 1st frame we don't call pfile.startNewSent
         frames=0;
         frame_len_index=0;
 	try {
 		obuffer = new float[fea_size];	// data
-                num_frame=0;
-                x_cbuffer=0;
-//                p=0.05;
-                sumM = new float[fea_size];
-                for(int i=0; i < fea_size; i++)
-                   sumM[i] = 0;
-
-                Z_obufferr=(float**)malloc(o->length_b*sizeof(float));
-                for(int i=0; i< o->length_b;i++){
-                  Z_obufferr[i]=(float*)malloc(fea_size*sizeof(float));
-                }
-                for(int i=0;i < o->length_b;i++){
-                  for(int j=0;j<fea_size;j++){
-                    Z_obufferr[i][j]=0;
-                  }
-                }
-//-------------------------------------------------------------------------------------------------------
         }
         catch (...) { throw ("OUT: Not enough memory!"); }
         // output to file
@@ -806,7 +675,6 @@ void arkOUT::update_header() {  // updates ark header
      fseeko64(fark, (__off64_t)0, SEEK_END);
      frames =0;
      firstframe = true;
-     num_frame=0;
 };
 
 void arkOUT::new_file(char * filename) {
@@ -852,9 +720,13 @@ uSint arkOUT::get_fea_size() {
 void arkOUT::save_frame() {
     Vec<double> & X = *_Xsabs;
 
-	// fill in output buffer
+    if(0==strcmp(o->format_in, "htk")){
+          for(int i=0; i<fea_size; i++)
+        obuffer[i] = (float)X[i];
+    }else{
+        // fill in output buffer
         if(o->fea_trap) strcpy(o->fea_kind,"spec");
-        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec")){
+        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec")) {       // spectrum output
             for(int i=0; i<Xsize; i++)
                obuffer[i] = (float) X[i];
             if (o->fea_E)
@@ -873,39 +745,12 @@ void arkOUT::save_frame() {
 	  }
          }
         }
-                //CMS
-                if(o->fea_Z_exp>0){
-                  for(int i=0; i < (o->fea_ncepcoefs+1); i++){
-                    sumM[i] = sumM[i]*(o->fea_Z_exp) + obuffer[i]*(1-o->fea_Z_exp);
-                    obuffer[i] -= sumM[i];
-                  }
-                }
-                if(o->fea_Z_block>0){
-                  x_cbuffer = num_frame % o->length_b;
-                  for(int j=0;j<(o->fea_ncepcoefs+1);j++){
-                    Z_obufferr[x_cbuffer][j] = obuffer[j];
-                  }
+    }
 
-                  if(num_frame >= o->length_b-1){
-                     for(int i=0; i < (o->fea_ncepcoefs+1); i++)
-                       sumM[i] = 0;
-
-                     for(int i=0; i < (o->fea_ncepcoefs+1); i++){
-                        for(int  x = 0; x < o->length_b; x++){
-                           sumM[i] += Z_obufferr[x][i];
-                        }
-                     }
-                     for(int i=0; i<(o->fea_ncepcoefs+1); i++)
-                       sumM[i] /= o->length_b;
-                  }
-                  for(int i=0; i<(o->fea_ncepcoefs+1); i++)
-                      obuffer[i] -= sumM[i];
-                }
-         num_frame++;
-	// write it
-        if(fea_size != (int) fwrite(obuffer, sizeof(float), fea_size, fark))
-          throw "OUT: Error in stream writing! Zde";
-        frames++;
+    // write it
+    if(fea_size != (int) fwrite(obuffer, sizeof(float), fea_size, fark))
+      throw "OUT: Error in stream writing!";
+    frames++;
 };
 
 bool arkOUT::rename_path_ark_to_scp(char *string){
@@ -933,11 +778,6 @@ arkOUT::~arkOUT() {
       fclose(fark);
       fclose(fscp);
       delete [] obuffer;
-        delete [] sumM;
-        for(int i=0;i < o->length_b;i++){
-          free(Z_obufferr[i]);
-        }
-        free(Z_obufferr);
 };
 
 // --------- public class OUT -----------

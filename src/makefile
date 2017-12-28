@@ -46,13 +46,13 @@ all: ctucopy4
 ctucopy4: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++  -o "bin/ctucopy4" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++  -o "../bin/ctucopy4" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(C_DEPS)$(C++_DEPS)$(CXX_DEPS)$(CPP_DEPS)$(CU_DEPS)$(CC_DEPS)$(EXECUTABLES)$(OBJS)$(C_UPPER_DEPS)$(TCC_DEPS) bin/ctucopy4
+	-$(RM) $(C_DEPS)$(C++_DEPS)$(CXX_DEPS)$(CPP_DEPS)$(CU_DEPS)$(CC_DEPS)$(EXECUTABLES)$(OBJS)$(C_UPPER_DEPS)$(TCC_DEPS) ../bin/ctucopy4
 	-@echo ' '
 
 .PHONY: all clean dependents

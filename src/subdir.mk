@@ -19,7 +19,8 @@ io/in.cc \
 nr/nr.cc \
 io/opts.cc \
 io/out.cc \
-io/pfile.cc 
+io/pfile.cc \
+vad/vad.cc
 
 CPP_DEPS += \
 main.d 
@@ -37,7 +38,8 @@ io/in.d \
 nr/nr.d \
 io/opts.d \
 io/out.d \
-io/pfile.d 
+io/pfile.d \
+vad/vad.d
 
 OBJS += \
 io/batch.o \
@@ -53,7 +55,8 @@ main.o \
 nr/nr.o \
 io/opts.o \
 io/out.o \
-io/pfile.o 
+io/pfile.o \
+vad/vad.o
 
 
 # Each subdirectory must supply rules for building sources it contributes

@@ -103,6 +103,41 @@ opts::opts(int& argc, char **&argv, char *_version) {
  	strcpy(preset,"user");
         weight_of_td_iir_mfcc_bank=2.026;
 
+	// Voice Activity Detection
+        strcpy(vad_apply_mode, "none");
+        strcpy(vad_out_mode, "none");
+
+        strcpy(vad_out, "");
+
+	strcpy(vad_cri_mode, "energy");
+	strcpy(vad_thr_mode, "perc");
+
+        vad_energy_db = true;
+
+        strcpy(vad_cepdist_mode, "lpc");
+        vad_cepdist_p = 0.8;
+        vad_cepdist_init = 4;
+
+        vad_lpc_coefs = 14;
+
+	vad_absolute_thr = 1.0; // TODO default value
+        vad_perc_init = 10;
+	vad_perc_thr = 50.0;
+
+        vad_adapt_init = 20;
+        vad_adapt_q = 0.9;
+        vad_adapt_za = 2.0;
+
+        vad_dyn_init = 5;
+        vad_dyn_perc = 50.0;
+        vad_dyn_min = 1.0; // TODO default values
+        vad_dyn_qmaxinc = 0.8;
+        vad_dyn_qmaxdec = 0.995;
+        vad_dyn_qmindec = 0.8;
+        vad_dyn_qmininc = 0.9999;
+
+        vad_filter_order = 3;
+
  	// Misc.
  	verbose = false;
 	quiet = false;
@@ -223,6 +258,15 @@ int opts::check_config() {
 
 	window = (int) floor(.5 + window_ms/1000. * (double)fs);
 	wshift = (int) floor(.5 + wshift_ms/1000. * (double)fs);
+
+        if((stat_cmvn == true || apply_cmvn == true) && (fea_Z_block!=-1 || fea_Z_exp!=-1)){
+          cerr << "OPTS: CMN or CMVN can not be set together with CMS option (exp or block CMS normalisations)!" << endl;
+        }
+
+        if(fea_Z_block!=-1 && fea_Z_exp!=-1){
+          cerr << "OPTS: Please set exp CMS or block CMS normalisation method!" << endl;
+        }
+
         if(fea_Z_block!=-1)
   	   length_b = (int) floor((fea_Z_block-window_ms)/wshift_ms)+1;
 
@@ -250,12 +294,6 @@ int opts::check_config() {
 	if (0==strcmp(vadmode,"burg")) phase_needed = true;
 
 	if (preem >= 1.0 || preem < 0.0) throw ("OPTS: Preemphasis not in range <0,1)!");
-
-//        if(fea_Z_exp!=-1){
-//	  if (fea_Z_exp < 250) cout << "Averaging interval is lower that 500 ms!" <<endl;
-//        }
-//	if (fea_Z_block > 10000) throw ("OPTS: Parameters fea_Z_block not in range <= window_ms , 10s)!");
-
 
 //	if ((strcmp(in,"")==0)^(0==strcmp(out,""))) 
 //		throw "OPTS: Both -i and -o options have to be set in single file mode!";
@@ -374,6 +412,31 @@ void opts::settings() {
                  << "\tCMS fea_Z_block (off = -1)           = " << fea_Z_block << endl
                  << "\tCMVN stat_cmvn                       = " << _bool[stat_cmvn] << endl
                  << "\tCMVN apply_cmvn                      = " << _bool[apply_cmvn] << endl
+		 << "- Voice Activity Detection:" << endl
+		 << "\tVAD apply mode                       = " << vad_apply_mode << endl
+		 << "\tVAD out mode                         = " << vad_out_mode << endl
+		 << "\tVAD output file (single-file mode)   = " << vad_out << endl
+		 << "\t-- VAD criterial function            = " << vad_cri_mode << endl
+		 << "\tnormalize energy in decibels         = " << _bool[vad_energy_db] << endl
+                 << "\tcepstral distance mode               = " << vad_cepdist_mode << endl
+		 << "\tsmoothness of cepstral background estimation p = " << vad_cepdist_p << endl
+		 << "\tinit voiceless segments for cepstral background estimation = " << vad_cepdist_init << endl
+		 << "\tnumber of LPC cepstral coefficients  = " << vad_lpc_coefs << endl
+		 << "\t-- VAD thresholding method           = " << vad_thr_mode << endl
+		 << "\tabsolute threshold placement         = " << vad_absolute_thr << endl
+		 << "\tinit segments for perc. threshold    = " << vad_perc_init << endl
+		 << "\tpercentual threshold placement       = " << vad_perc_thr << endl
+		 << "\tadaptive threshold init (voiceless) segments = " << vad_adapt_init << endl
+		 << "\tadaptive threshold smoothness q      = " << vad_adapt_q << endl
+		 << "\tspeech-to-background parameter z_alpha = " << vad_adapt_za << endl
+		 << "\tdynamic threshold init (voiceless) segments = " << vad_dyn_init << endl
+		 << "\tthreshold placement in dynamic range   = " << vad_dyn_perc << endl
+		 << "\tdynamic range minimum                    = " << vad_dyn_min << endl
+		 << "\tsmoothness of increasing dynamic maximum = " << vad_dyn_qmaxinc << endl
+		 << "\tsmoothness of decreasing dynamic maximum = " << vad_dyn_qmaxdec << endl
+		 << "\tsmoothness of decreasing dynamic minimum = " << vad_dyn_qmindec << endl
+		 << "\tsmoothness of increasing dynamic minimum = " << vad_dyn_qmininc << endl
+                 << "\tvad output median filter order           = " << vad_filter_order << endl
 		 << "- Miscellaneous:" << endl
 		 << "\tverbose                              = " << _bool[verbose] << endl
 		 << "\tquiet mode                           = " << _bool[quiet] << endl
@@ -507,7 +570,58 @@ void opts::usage() {
 	     << "    -stat_cmvn  <filename>  - single output file with stat. of CMVN              <none>" << endl
 	     << "    -apply_cmvn <filename>  - apply cmvn, single input file with stat. of CMVN   <none>" << endl
 	     << "    -weight_of_td_iir_mfcc_bank <double>  - weight of td-iir-mfcc bank          <2.026>" << endl
-             << "                                                                                       " << endl
+             << endl
+             << "  VOICE ACTIVITY DETECTION:                                                         " << endl
+             << "    -vad_apply_mode <mode>  - how to apply VAD on output                            <none>" << endl
+             << "               mode    = none     - do not apply VAD on output                      " << endl
+             << "                         silence  - silence non-speech segments                     " << endl
+             << "                         drop     - drop non-speech segments                        " << endl
+             << endl
+             << "    -vad_out_mode <mode>    - how to safe VAD output                                <none>" << endl
+             << "               mode    = none     - do not save VAD output file                     " << endl
+             << "                         vad      - only save VAD output file                       " << endl
+             << "                         debug    - save VAD output file and debug files            " << endl
+             << endl
+             << "    -vad_out  <filename>    - VAD output file for single-file ctucopy mode          <none>"<< endl
+             << endl
+             << "    -vad_cri_mode <mode>          - VAD criterion mode                              <energy>" << endl
+             << "               mode    = energy   - energetic detector                              " << endl
+             << "                         cepdist  - cepstral distance                               " << endl
+             << endl
+             << "    -vad_energy_db <on|off> - normalize energy in decibels                          <on>" << endl
+             << endl
+             << "    -vad_cepdist_mode <mode> - cepstral distance from...                            <lpc>" << endl
+             << "               mode    = lpc - VAD internal LPC cepstrum estimator                  " << endl
+             << "                         fea - features computed inside fea module                  " << endl
+             << "                         in  - input features (if input is HTK feature file)        " << endl
+             << "    -vad_cepdist_p      <double> - smoothness of cepstral background estimation     <0.8>" << endl
+             << "    -vad_cepdist_init   <int>    - init segments for cepstral background            <4>" << endl
+             << "    -vad_lpc_coefs <int>     - number of LPC cepstral coefficients                  <14>" << endl
+             << endl
+             << "    -vad_thr_mode <mode>    - VAD threshold-setting method                          <perc>" << endl
+             << "                mode   = absolute - set threshold by absolute value                 " << endl
+             << "                         perc     - percentual threshold placed in criterial value range" << endl
+             << "                         adapt    - adaptive threshold (Harrison detector)          " << endl
+             << "                         dyn      - adaptive threshold based on criterial function dynamic " << endl
+             << endl
+             << "    -vad_absolute_thr <double>  - absolute threshold placement                      <TODO>" << endl
+             << "    -vad_perc_init <int>        - init segments for perc. threshold                 <10.0>" << endl
+             << "    -vad_perc_thr  <double>     - percentual threshold placement                    <50.0>" << endl
+             << endl
+             << "    -vad_adapt_init  <int>  - voiceless init segments for adaptive threshold        <20>" << endl
+             << "    -vad_adapt_q  <double>  - adaptive threshold smoothness q                       <0.9>" << endl
+             << "    -vad_adapt_za <double>  - speech-to-background parameter z_alpha                <2.0>" << endl
+             << endl
+             << "    -vad_dyn_init    <int>    - voiceless init segments for dynamic threshold       <5>" << endl
+             << "    -vad_dyn_perc    <double> - threshold placement in dynamic range (percentual)   <50.0>" << endl
+             << "    -vad_dyn_min     <double> - dynamic range minimum                               <TODO>" << endl
+             << "    -vad_dyn_qmaxinc <double> - smoothness of increasing dynamic maximum            <0.8>" << endl
+             << "    -vad_dyn_qmaxdec <double> - smoothness of decreasing dynamic maximum            <0.995>" << endl
+             << "    -vad_dyn_qmindec <double> - smoothness of decreasing dynamic minimum            <0.8>" << endl
+             << "    -vad_dyn_qmininc <double> - smoothness of increasing dynamic minimum            <0.9999>" << endl
+             << endl
+             << "    -vad_filter_order <int>   - vad output filter order                             <3>" << endl
+             << endl
          << "  PRESETS:                                                                              " << endl
 	     << "    -preset <type>          - apply a preset to the above options. Use -v option  <user>" << endl
 	     << "                              to list exact settings when used. See man page for        " << endl
@@ -684,6 +798,37 @@ int	opts::parse(char*l,char*r) {
 	}
 	else if (!strcmp(l,"-weight_of_td_iir_mfcc_bank"))  { if(r) weight_of_td_iir_mfcc_bank = (float) atof(r);}
 	else if (!strcmp(l,"-fea_lifter"))  { if(r) fea_lifter = atoi(r); }
+
+// VAD -------------------------------------------------------------------------
+	else if (!strcmp(l,"-vad_apply_mode"))  { if(r) strcpy(vad_apply_mode,r); }
+	else if (!strcmp(l,"-vad_out_mode"))    { if(r) strcpy(vad_out_mode,r); }
+	else if (!strcmp(l,"-vad_out"))         { if(r) strcpy(vad_out,r); }
+	else if (!strcmp(l,"-vad_cri_mode"))    { if(r) strcpy(vad_cri_mode,r); }
+	else if (!strcmp(l,"-vad_thr_mode"))    { if(r) strcpy(vad_thr_mode,r); }
+	else if (!strcmp(l,"-vad_energy_db") && r) {
+		if (!strcmp(r,"on")) vad_energy_db = true;
+		else if (!strcmp(r,"off")) vad_energy_db = false;
+	}
+        else if (!strcmp(l,"-vad_cepdist_mode")) { if(r) strcpy(vad_cepdist_mode,r); }
+	else if (!strcmp(l,"-vad_cepdist_p"))   { if(r) vad_cepdist_p = atof(r); }
+	else if (!strcmp(l,"-vad_cepdist_init")) { if(r) vad_cepdist_init = atoi(r); }
+	else if (!strcmp(l,"-vad_lpc_coefs"))   { if(r) vad_lpc_coefs = atoi(r); }
+	else if (!strcmp(l,"-vad_absolute_thr"))  { if(r) vad_absolute_thr = atof(r); }
+	else if (!strcmp(l,"-vad_perc_init"))  { if(r) vad_perc_init = atoi(r); }
+	else if (!strcmp(l,"-vad_perc_thr"))  { if(r) vad_perc_thr = atof(r); }
+	else if (!strcmp(l,"-vad_adapt_init"))  { if(r) vad_adapt_init = atoi(r); }
+	else if (!strcmp(l,"-vad_adapt_q"))     { if(r) vad_adapt_q = atof(r); }
+	else if (!strcmp(l,"-vad_adapt_za"))    { if(r) vad_adapt_za = atof(r); }
+	else if (!strcmp(l,"-vad_dyn_init"))    { if(r) vad_dyn_init = atoi(r); }
+	else if (!strcmp(l,"-vad_dyn_perc"))    { if(r) vad_dyn_perc = atof(r); }
+	else if (!strcmp(l,"-vad_dyn_min"))     { if(r) vad_dyn_min = atof(r); }
+	else if (!strcmp(l,"-vad_dyn_qmaxinc")) { if(r) vad_dyn_qmaxinc = atof(r); }
+	else if (!strcmp(l,"-vad_dyn_qmaxdec")) { if(r) vad_dyn_qmaxdec = atof(r); }
+	else if (!strcmp(l,"-vad_dyn_qmindec")) { if(r) vad_dyn_qmindec = atof(r); }
+	else if (!strcmp(l,"-vad_dyn_qmininc")) { if(r) vad_dyn_qmininc = atof(r); }
+	else if (!strcmp(l,"-vad_filter_order")){ if(r) vad_filter_order = atoi(r); }
+// VAD END ---------------------------------------------------------------------
+
 	else if (!strcmp(l,"-preset")) 		{ if(r) {strcpy(preset,r);set_preset();}}
 	else if (!strcmp(l,"-verbose"))     { verbose = true; quiet = false; info = true; }
 	else if (!strcmp(l,"-v"))   		{ verbose = true; quiet = false; info = true; }

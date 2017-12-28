@@ -40,7 +40,8 @@ class _POST {
         virtual bool sum_cv() {return 0;};
         virtual bool stat_cm() {return 0;};
         virtual bool stat_cv() {return 0;};
-        virtual bool cmvn() {return 0;};
+        virtual void clean(){};
+        virtual bool process_frame() {return 0;};
         virtual int add_spk(char *id_spk) {return 0;};
 
         virtual Vec<double>**  get_fvec_cmean() {return _mvec_cmean;}
@@ -66,10 +67,26 @@ public:
     virtual bool sum_cv();
     virtual bool stat_cm();
     virtual bool stat_cv();
-    virtual bool cmvn();
+    virtual bool process_frame();
     virtual int add_spk(char *id_spk);
 
     virtual ~cmvn_POST();
+};
+
+class cms_POST : public _POST{
+
+    int nfea;                    // input vector size
+    string cms_type;
+    int x_cbuffer;
+    float * sumM;
+    float ** Z_obufferr;
+    int num_frame;
+
+public:
+    cms_POST(opts* o, Vec<double> *);
+    virtual bool process_frame();
+    virtual void clean();
+    virtual ~cms_POST();
 };
 
 
