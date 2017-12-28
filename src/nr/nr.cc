@@ -354,11 +354,6 @@ bool fwssNR::process_frame() {
         if (X[i] < 0.) X[i] = -X[i];
   	}
 
-/*  	for (int i = 0; i < size; i++)
-        cout << Navg[i] << "\t";
-    cout << endl;
-*/
-
 	// dynamic compression
 	if (a == 2.)
 	  	for (int i = 0; i < size; i++)

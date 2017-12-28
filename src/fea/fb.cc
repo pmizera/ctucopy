@@ -61,13 +61,6 @@ FB::FB (opts* o_in, Vec<double> * X) {
 	}
 	optimize();				// finally optimize filter bank (see below)
 
-//	for (int i = 0; i < size; i++) {
-//        for (int j = 0; j < o->wfftby2; j++)
-//        	cout << mat[i][j] << "\t";
-//        cout << endl;
-//    }
-//    throw;
-
 	try { _Y = new Vec<double>(size); } // alloc output spect.
 	catch (...) { throw "FB: Not enough memory!"; }
 };

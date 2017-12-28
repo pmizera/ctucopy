@@ -754,22 +754,16 @@ bool cmvnIN::new_file(char * filename){
         }
         if(!strcmp(spk,"mean")){
           Vec<double> & X = *_M_cmean[j];
-//          cout<<"mean:";
           for(int i=0; i<nfea; i++){
              X[i] = atof(strtok(NULL," \t"));
-//             cout<<" "<<X[i];
           }
-//          cout<<endl;
         }else if(!strcmp(spk,"var")){
           Vec<double> & Y = *_M_cvar[j];
-//          cout<<"var:";
           for(int i=0; i<nfea; i++){
              Y[i] = atof(strtok(NULL," \t"));
-//             cout<<" "<<Y[i];
           }
           j++;
           new_spk=1;
-//          cout<<endl;
         }
    }
    return true;
