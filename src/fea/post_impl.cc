@@ -101,7 +101,7 @@ bool cmvn_POST::stat_cv(){
    return true;
 };
 
-bool cmvn_POST::cmvn(){
+bool cmvn_POST::process_frame(){
     Vec<double> & F = *_fvec;
     Vec<double> & M_cmean = *_mvec_cmean[id_spk];
     Vec<double> & M_cvar  = *_mvec_cvar[id_spk];
@@ -155,4 +155,89 @@ bool cmvn_POST::new_spk_1(char *ID_spk){
 cmvn_POST::~cmvn_POST() {
     delete _mvec_cmean;
     delete _mvec_cvar;
+};
+
+cms_POST::cms_POST(opts* o, Vec<double> * _fvec): _POST(o,_fvec){
+    nfea    = _fvec->get_size()+1;
+    num_frame = 0;
+
+    if(o->fea_Z_exp>0)
+      cms_type = "exp";
+
+    if(o->fea_Z_block>0)
+      cms_type = "block";
+
+    if(cms_type.empty())
+      cout << "POST: Set cms type: exp or block version." << endl;
+
+    x_cbuffer=0;
+    sumM = new float[nfea];
+    for(int i=0; i < nfea; i++)
+      sumM[i] = 0;
+
+    Z_obufferr=(float**)malloc(o->length_b*sizeof(float));
+    for(int i=0; i< o->length_b;i++){
+      Z_obufferr[i]=(float*)malloc(nfea*sizeof(float));
+    }
+
+    for(int i=0;i < o->length_b;i++){
+      for(int j=0;j<nfea;j++){
+        Z_obufferr[i][j]=0;
+      }
+    }
+};
+
+void cms_POST::clean(){
+    num_frame = 0;
+    x_cbuffer=0;
+    for(int i=0; i < nfea; i++)
+      sumM[i] = 0;
+
+    for(int i=0;i < o->length_b;i++){
+      for(int j=0;j<nfea;j++){
+        Z_obufferr[i][j]=0;
+      }
+    }
+};
+
+bool cms_POST::process_frame(){
+    Vec<double> & F = *_fvec;
+
+    // CMS
+    if(cms_type == "exp" ){
+      for(int i=0; i < (o->fea_ncepcoefs+1); i++){
+        sumM[i] = sumM[i]*(o->fea_Z_exp) + F[i]*(1-o->fea_Z_exp);
+        F[i] -= sumM[i];
+      }
+
+    }
+
+    if(cms_type == "block" ){
+      x_cbuffer = num_frame % o->length_b;
+      for(int j=0;j<(o->fea_ncepcoefs+1);j++){
+        Z_obufferr[x_cbuffer][j] = F[j];
+      }
+
+      if(num_frame >= o->length_b-1){
+        for(int i=0; i < (o->fea_ncepcoefs+1); i++)
+          sumM[i] = 0;
+
+        for(int i=0; i < (o->fea_ncepcoefs+1); i++){
+          for(int  x = 0; x < o->length_b; x++){
+            sumM[i] += Z_obufferr[x][i];
+          }
+        }
+
+        for(int i=0; i<(o->fea_ncepcoefs+1); i++)
+          sumM[i] /= o->length_b;
+      }
+
+      for(int i=0; i<(o->fea_ncepcoefs+1); i++)
+        F[i] -= sumM[i];
+    }
+    num_frame++;
+    return true;
+}
+
+cms_POST::~cms_POST() {
 };

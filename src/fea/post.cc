@@ -21,13 +21,15 @@ POST::POST (opts* o_in, Vec<double> * fvec) {
         o = o_in;
         _fvec = fvec;
 
-        if(o->stat_cmvn||o->apply_cmvn)  post = new cmvn_POST(o,fvec);
+        if(o->stat_cmvn||o->apply_cmvn){
+          post = new cmvn_POST(o,fvec);
+          _mvec_cmean  = post->get_fvec_cmean();
+          _mvec_cvar   = post->get_fvec_cvar();
+          _list_ID_spk = post->get_list_ID_spk();
+          _fvec  = post->get_fvec();
+        } else if(o->fea_Z_exp>0 || o->fea_Z_block>0)  post = new cms_POST(o,fvec);
         else throw ("POST: Unknown post-processing!");
 
-        _mvec_cmean  = post->get_fvec_cmean();
-        _mvec_cvar   = post->get_fvec_cvar();
-        _list_ID_spk = post->get_list_ID_spk();
-        _fvec  = post->get_fvec();
 };
 
 POST::POST (opts* o_in, Vec<double> * fvec, Vec<double> ** m_cmean, Vec<double> ** m_cvar,char ** l_ID_spk) {
@@ -59,8 +61,12 @@ bool POST::stat_cv(){
         return post->stat_cv();
 }
 
-bool POST::cmvn(){
-        return post->cmvn();
+bool POST::process_frame(){
+        return post->process_frame();
+}
+
+void POST::clean(){
+        return post->clean();
 }
 
 int POST::add_spk(char* id_spk){
