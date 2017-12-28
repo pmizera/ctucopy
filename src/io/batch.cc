@@ -119,7 +119,6 @@ void BATCH::init_out(Vec<double> *Xabs, Vec<double> * Xph) {
         }
 };
 
-// TODO: move it to fea_delta.cc
 void BATCH::init_delta(Vec<double> * in_fvec, Vec<double> * in_Xsph){
           if(o->n_order>=1) fea_d     = new deltaFEA(o,in_fvec,2,o->d_win);
           if(o->n_order>=2) fea_d_d   = new deltaFEA(o,fea_d->_fvec,3,o->a_win);
