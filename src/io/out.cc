@@ -180,7 +180,7 @@ void htkOUT::save_frame() {
    }else{
         // fill in output buffer
         if(o->fea_trap) strcpy(o->fea_kind,"spec");
-        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec")) {       // spectrum output
+        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec") || 0==strcmp(o->fea_kind, "trapdct")) {       // spectrum output
             for(int i=0; i<Xsize; i++)
                obuffer[i] = (float) X[i];
             if(o->fea_E)
@@ -282,7 +282,7 @@ void pfileOUT::save_frame() {
 
 	// fill in output buffer
         if(o->fea_trap) strcpy(o->fea_kind,"spec");
-        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec")){
+        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec") || 0==strcmp(o->fea_kind, "trapdct")){
             for(int i=0; i<Xsize; i++)
                obuffer[i] = (float) X[i];
             if (o->fea_E)
@@ -726,7 +726,7 @@ void arkOUT::save_frame() {
     }else{
         // fill in output buffer
         if(o->fea_trap) strcpy(o->fea_kind,"spec");
-        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec")) {       // spectrum output
+        if(0==strcmp(o->fea_kind, "spec") || 0==strcmp(o->fea_kind, "logspec") || 0==strcmp(o->fea_kind, "trapdct")) {       // spectrum output
             for(int i=0; i<Xsize; i++)
                obuffer[i] = (float) X[i];
             if (o->fea_E)
